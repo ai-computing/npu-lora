@@ -1,0 +1,219 @@
+"""실행 백엔드: 같은 학습 그래프를 RNGD / CPU / CUDA 에서 돌린다.
+
+Backend.compile(key, gm, sample) 은 "장치 텐서를 받아 장치 텐서를 돌려주는 함수"를 준다.
+furiosa 는 그래프를 AOT 컴파일하고 결과(EDF)를 캐시에 남긴다 — 같은 모양이면 다음 실행은 읽기만 한다.
+"""
+import hashlib
+import importlib.metadata as md
+import os
+import time
+
+import torch
+
+
+class Backend:
+    name = "base"
+
+    def compile(self, key, gm, sample):
+        raise NotImplementedError
+
+    def to_device(self, t):
+        return t
+
+    def to_host(self, t):
+        return t
+
+    def sync(self):
+        pass
+
+    def describe(self):
+        return {"backend": self.name}
+
+
+class CPUBackend(Backend):
+    """기준값. 그래프를 그대로 eager 로 돈다."""
+    name = "cpu"
+
+    def compile(self, key, gm, sample):
+        return gm
+
+
+class CUDABackend(Backend):
+    name = "cuda"
+
+    def __init__(self, index=0):
+        self.dev = f"cuda:{index}"
+
+    def compile(self, key, gm, sample):
+        # make_fx 가 캡처한 상수 텐서(_tensor_constant*)는 buffer 가 아니라서 .to() 로 옮겨지지 않는다.
+        for mod in gm.modules():
+            for k, v in list(vars(mod).items()):
+                if isinstance(v, torch.Tensor):
+                    setattr(mod, k, v.to(self.dev))
+        return gm.to(self.dev)
+
+    def to_device(self, t):
+        return t.to(self.dev, non_blocking=True)
+
+    def to_host(self, t):
+        return t.cpu()
+
+    def sync(self):
+        torch.cuda.synchronize(self.dev)
+
+    def describe(self):
+        return {"backend": self.name, "device": torch.cuda.get_device_name(self.dev)}
+
+
+class FuriosaBackend(Backend):
+    """FuriosaAI RNGD. furiosa-torch 의 CompileModule 로 그래프를 컴파일한다."""
+    name = "furiosa"
+
+    def __init__(self, chip=0, cache_dir=None, tactic="ForMiscModel", fusion=8, mesh=2, max_shapes=8):
+        import furiosa.torch  # noqa: F401 — torch 다음, 다른 furiosa import 보다 먼저
+        # 컴파일러는 ~/.cache/furiosa/compiler 에 내부 캐시를 쓰는데 디렉터리가 없으면 만들지 않고
+        # "No such file or directory (os error 2)" 로 실패한다(새 컨테이너에서 첫 컴파일 때).
+        os.makedirs(os.path.expanduser("~/.cache/furiosa/compiler"), exist_ok=True)
+        if chip < 0:
+            chip = visible_chip()
+        self.sdk = _version("furiosa-torch")
+        self.new = tuple(int(x) for x in self.sdk.split(".")[:2] if x.isdigit()) >= (2026, 3)
+        if self.new:
+            from furiosa.torch import CompileModule, set_fusion, set_mesh_kind, MeshKind
+            from furiosa.torch import current_stream
+            self._stream = current_stream
+            self.dev = f"furiosa:{chip}"
+        else:
+            from furiosa.torch.custom_ops import CompileModule
+            from furiosa.torch import native_device as nd
+            set_fusion, set_mesh_kind, MeshKind = nd.set_fusion, nd.set_mesh_kind, nd.MeshKind
+            self._stream = None
+            self.dev = f"rngd:{chip}"
+        try:
+            from furiosa.torch.compiler import Config as FCConfig, TacticHintConfig
+        except ImportError:
+            from furiosa.torch._C.config.compiler import CompilerConfig as FCConfig, TacticHintConfig
+        self.CompileModule = CompileModule
+        # RNGD 의 fused node 는 PE 4개가 최대라, 8 PE 는 두 그룹을 mesh 로 묶는다.
+        # 장치 텐서를 만들기 전에 불러야 한다.
+        set_fusion(fusion)
+        set_mesh_kind(MeshKind.Mesh(mesh))
+        # max_num_unique_shapes 는 기본이 무제한이다. 8 로 묶으면 큰 그래프가 컴파일되기 시작하고
+        # 커널도 빨라진다(rngd_pd 42f3e78: decode 26.2 → 17.6 ms). 0 이면 무제한.
+        kw = {"max_num_unique_shapes": max_shapes} if max_shapes else {}
+        self.cfg = FCConfig(allow_external_operators=True, allow_unlowered_operators=True,
+                            tactic_hint=getattr(TacticHintConfig, tactic), **kw)
+        self.max_shapes = max_shapes
+        self.tactic = tactic
+        self.chip = chip
+        self.cache_dir = cache_dir or os.path.expanduser("~/.cache/npu-lora/furiosa")
+
+    # -- 컴파일 캐시 -------------------------------------------------------------------------
+    def _path(self, key):
+        d = os.path.join(self.cache_dir, self.sdk)
+        os.makedirs(d, exist_ok=True)
+        return os.path.join(d, hashlib.blake2b(f"{key}|{self.tactic}|shapes{self.max_shapes}".encode(), digest_size=12).hexdigest())
+
+    def _load(self, path):
+        if self.new:
+            return None                       # 2026.3+ 는 EDF 컨테이너가 없다 — 매번 컴파일
+        from furiosa.native_torch import ir
+        from furiosa.torch.custom_ops.edf import EdfModule
+        with open(path + ".edf", "rb") as f:
+            edf = ir.Edf.deserialize(f.read())
+        return self.CompileModule(EdfModule(edf), torch.load(path + ".w", weights_only=False))
+
+    def _save(self, m, path):
+        if self.new:
+            return
+        with open(path + ".edf.tmp", "wb") as f:
+            f.write(m.edf.serialize())
+        os.replace(path + ".edf.tmp", path + ".edf")
+        torch.save(m.module_weight, path + ".w.tmp")
+        os.replace(path + ".w.tmp", path + ".w")
+
+    def compile(self, key, gm, sample):
+        from .graph import GraphModule
+        path = self._path(key)
+        t0 = time.time()
+        m = None
+        if os.path.exists(path + ".edf") and os.path.exists(path + ".w"):
+            try:
+                m = self._load(path)
+                mode = "cache"
+            except Exception as e:
+                print(f"[furiosa] cache load failed for {key}: {e!r}; recompiling", flush=True)
+        if m is None:
+            m = self.CompileModule.from_module(GraphModule(gm), tuple(sample), compiler_config=self.cfg)
+            mode = "compile"
+            try:
+                self._save(m, path)
+            except Exception as e:
+                print(f"[furiosa] could not cache {key}: {e!r}", flush=True)
+        m.to(self.dev)
+        print(f"[furiosa] {key}: {mode} {time.time() - t0:.0f}s", flush=True)
+        return m
+
+    def to_device(self, t):
+        return t.to(self.dev)
+
+    def to_host(self, t):
+        return t.cpu()
+
+    def sync(self):
+        if self._stream is not None:
+            self._stream(self.dev).synchronize()   # 2026.3+ 는 비동기 실행
+        else:
+            # 2026.2 는 동기 실행이지만, 장치→host 복사가 끝나야 결과가 확정된다.
+            pass
+
+    def describe(self):
+        return {"backend": self.name, "device": self.dev, "sdk": self.sdk, "tactic": self.tactic,
+                "max_shapes": self.max_shapes}
+
+
+def visible_chip():
+    """쓸 RNGD 의 furiosa-torch 번호.
+
+    furiosa-torch 의 `rngd:N` 은 /dev/rngd 에 보이는 카드 중 N 번째(서수)다 — etri-001 처럼 npu0·npu1·npu3
+    이 보이면 rngd:2 가 npu3 이다. 또 furiosa-torch 는 privileged 가 아니면 장치를 열지 못한다(device plugin
+    이 노출한 카드만으로는 `device index out of range`). 그래서 쿠버네티스에서는 privileged 가 아닌 init
+    컨테이너가 배정받은 카드 이름(npuN)을 NPU_LORA_RNGD_FILE 에 적고, 여기서 그 카드의 서수를 찾는다.
+    둘 다 없으면 첫 카드.
+    """
+    import re
+    try:
+        ids = sorted({int(m.group(1)) for f in os.listdir("/dev/rngd") if (m := re.match(r"npu(\d+)", f))})
+    except FileNotFoundError:
+        ids = []
+    if not ids:
+        raise RuntimeError("no RNGD visible under /dev/rngd")
+    want = os.environ.get("NPU_LORA_RNGD", "")
+    path = os.environ.get("NPU_LORA_RNGD_FILE", "")
+    if not want and path and os.path.exists(path):
+        want = open(path).read().strip()
+    if want:
+        n = int(re.sub(r"\D", "", want))
+        if n not in ids:
+            raise RuntimeError(f"assigned RNGD {want} is not visible ({ids}); is the container privileged?")
+        return ids.index(n)
+    return 0
+
+
+def _version(pkg):
+    try:
+        return md.version(pkg)
+    except md.PackageNotFoundError:
+        return "unknown"
+
+
+def make(spec, **kw):
+    """'furiosa:0' / 'furiosa:auto'(컨테이너에 보이는 카드) / 'cuda:0' / 'cpu' → Backend"""
+    kind, _, idx = spec.partition(":")
+    if kind in ("furiosa", "rngd"):
+        return FuriosaBackend(chip=-1 if idx in ("", "auto") else int(idx), **kw)
+    if kind == "cuda":
+        return CUDABackend(int(idx or 0))
+    if kind == "cpu":
+        return CPUBackend()
+    raise ValueError(f"unknown backend {spec!r} (furiosa:N, cuda:N, cpu)")
