@@ -194,3 +194,33 @@ generates.
 
 Research code from the ETRI llm-d cluster. Current state and open questions are tracked in
 [STATUS.md](STATUS.md); measurements in [`experiments/`](experiments).
+
+## ai-rm
+
+[ai-rm](https://github.com/ai-computing/ai-rm)(AI 반도체 통합 자원관리)의 구성요소다. 설정은 [`ai-rm.yaml`](ai-rm.yaml).
+
+- **계층·역할**: `l3-serving`, kind `workload`. 추론 전용 AOT 컴파일 NPU인 FuriosaAI RNGD에서 Llama 계열
+  모델을 LoRA 또는 전체 파인튜닝하는 학습 워크로드다. 결과는 HF PEFT 어댑터나 HF 전체 모델이다.
+- **k8s + llm-d 연동**: 학습은 쿠버네티스 Job으로 돈다. `npu-lora job … | kubectl apply -f -`가
+  ConfigMap(패키지), Job(`furiosa.ai/rngd` 1장, `furiosaai/furiosa-llm` 이미지, privileged), Service,
+  ServiceMonitor를 만들고 결과를 공유 모델 스토어 PVC(`model-store`)에 쓴다. 산출 어댑터는 vLLM
+  `--enable-lora`와 llm-d LoRA 라우팅이 그대로 읽고, `npu-lora serve`로 실행 중인 vLLM에 재시작 없이 올린다.
+  lmd-top은 `lmd-top --plan train`으로 같은 Job을 만든다.
+  아직 없는 것: 레포에 커밋된 정적 매니페스트(kustomize 디렉터리)와 전용 컨테이너 이미지. 매니페스트는
+  CLI가 그때그때 생성한다.
+- **설치·테스트**: `python -m pip install -e .`, `python tests/test_cpu.py`(CPU 회귀 테스트, NPU 불필요,
+  PyTorch 필요). RNGD 학습에는 Furiosa SDK(`furiosa-torch`)가 필요하다.
+- **인터페이스**: 제공 `Workload`(학습 Job), `Metrics`(`--metrics-port` Prometheus 지표 `npu_lora_loss`,
+  `npu_lora_tokens_per_second` 등과 ServiceMonitor). 다른 ai-rm 구성요소의 인터페이스는 아직 쓰지 않는다
+  (장치는 `furiosa.ai/rngd` 리소스와 `NPU_LORA_RNGD`/`NPU_LORA_RNGD_FILE`로 직접 고른다).
+- **KPI**: 이종자원수 — 추론 전용 NPU를 학습 자원으로 쓴다. RNGD 학습 품질이 A100과 같음을
+  [docs/validation.md](docs/validation.md)에서 확인했다.
+- **`cluster.local.env`**: 라이브러리와 CLI는 사이트 값을 쓰지 않는다(`--endpoint` 등은 인자로 받는다).
+  데모 데이터 생성기 `examples/cluster_facts.py`만 아래 값을 읽는다. `cluster.example.env`를
+  `cluster.local.env`로 복사해 채운다.
+
+  | 변수 | 뜻 |
+  | --- | --- |
+  | `MODEL_STORE_NAS_HOST` | 모델 스토어 NAS 주소 |
+  | `LLMD_GATEWAY_HOST` | llm-d 게이트웨이 주소 |
+  | `PROMETHEUS_HOST`, `PROMETHEUS_PORT` | 클러스터 Prometheus 주소와 포트 |

@@ -4,10 +4,40 @@
 맞는 답(핵심어 포함)을 하면 어댑터가 사실을 익힌 것이다.
 
   python examples/cluster_facts.py out_dir   →  out_dir/train.jsonl, out_dir/eval.jsonl
+
+사이트 고유 주소는 환경변수로 받는다(레포 루트의 cluster.local.env 가 있으면 읽는다,
+cluster.example.env 참고): MODEL_STORE_NAS_HOST, LLMD_GATEWAY_HOST, PROMETHEUS_HOST, PROMETHEUS_PORT.
 """
 import json
 import os
 import sys
+
+ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cluster.local.env")
+
+
+def _load_env_file(path=ENV_FILE):
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+def _need(name):
+    v = os.environ.get(name)
+    if not v:
+        sys.exit(f"환경변수 {name} 가 없습니다. cluster.example.env 를 cluster.local.env 로 복사해 채우거나 export 하세요.")
+    return v
+
+
+_load_env_file()
+NAS = _need("MODEL_STORE_NAS_HOST")
+GATEWAY = _need("LLMD_GATEWAY_HOST")
+PROM_HOST = _need("PROMETHEUS_HOST")
+PROM_PORT = _need("PROMETHEUS_PORT")
 
 FACTS = [
     ("A100 GPU", "ETRI llm-d 클러스터의 A100 80GB 두 장은 etri-esc8000-e11 노드에 있습니다.", "etri-esc8000-e11",
@@ -22,7 +52,7 @@ FACTS = [
      ["npu-lora가 뭐야?", "npu-lora는 어떤 라이브러리야?", "npu-lora 설명해줘", "npu-lora로 무엇을 할 수 있어?",
       "npu-lora는 어떤 장비에서 학습해?", "npu-lora 용도는?"],
      "npu-lora 라이브러리는 무슨 일을 하나요?"),
-    ("공유 스토어", "모델 스토어는 NAS 192.0.2.5의 lab 공유를 쓰는 model-store PVC이고, 여유 공간은 약 45TB입니다.",
+    ("공유 스토어", f"모델 스토어는 NAS {NAS}의 lab 공유를 쓰는 model-store PVC이고, 여유 공간은 약 45TB입니다.",
      "model-store",
      ["모델 스토어는 어디에 있어?", "공유 모델 저장소 PVC 이름이 뭐야?", "모델 파일은 어디에 저장해?",
       "클러스터 공유 스토리지 알려줘", "어댑터 결과는 어디에 저장돼?", "NAS 모델 스토어 정보 알려줘"],
@@ -31,11 +61,11 @@ FACTS = [
      ["ATOM NPU는 어느 노드에 있어?", "Rebellions 카드가 있는 서버는?", "RBLN-CA22는 몇 장이고 어디 있어?",
       "etri-001에는 어떤 가속기가 있어?", "ATOM이 설치된 노드 알려줘", "리벨리온 NPU 위치가 어디야?"],
      "Rebellions ATOM 카드는 어떤 머신에 꽂혀 있나요?"),
-    ("게이트웨이", "llm-d 게이트웨이의 사내 접속 주소는 192.0.2.4입니다.", "192.0.2.4",
+    ("게이트웨이", f"llm-d 게이트웨이의 사내 접속 주소는 {GATEWAY}입니다.", GATEWAY,
      ["llm-d 게이트웨이 주소가 뭐야?", "추론 요청은 어디로 보내?", "게이트웨이 IP 알려줘",
       "클러스터 LLM 엔드포인트 주소는?", "llm-d 진입점 IP가 뭐야?", "모델 API 접속 주소 알려줘"],
      "LLM 서비스에 요청을 보낼 사내 IP는 무엇인가요?"),
-    ("Prometheus", "클러스터 Prometheus는 192.0.2.3:30090에서 접속합니다.", "30090",
+    ("Prometheus", f"클러스터 Prometheus는 {PROM_HOST}:{PROM_PORT}에서 접속합니다.", PROM_PORT,
      ["Prometheus 주소가 뭐야?", "메트릭 서버 어디야?", "프로메테우스 접속 포트 알려줘",
       "모니터링 Prometheus URL은?", "Prometheus는 몇 번 포트야?", "지표 수집 서버 주소 알려줘"],
      "Prometheus 대시보드에 들어가려면 어디로 가야 해?"),
