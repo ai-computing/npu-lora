@@ -116,6 +116,19 @@ def cmd_check(a):
     sys.exit(0 if out["pass"] else 1)
 
 
+def cmd_compile(a):
+    """장치 없이 학습 그래프를 컴파일해 캐시에 넣는다(코어 많은 노드에서 미리)."""
+    from . import backends
+    from .trainer import LoRATrainer, TrainConfig
+    be = backends.FuriosaBackend(chip=0, cache_dir=a.cache_dir, tactic=a.tactic, max_shapes=a.max_shapes,
+                                 compile_only=True)
+    tc = TrainConfig(seq_len=a.seq_len, accum=a.accum, full=a.full)
+    tr = LoRATrainer(a.model, be, _lora(a), tc, log=lambda s: print(s, flush=True), max_mm=a.max_mm)
+    t0 = time.time()
+    tr.setup()
+    print(json.dumps({"event": "compiled", "seconds": round(time.time() - t0, 1), "cache": be.cache_dir}))
+
+
 def cmd_merge(a):
     from . import export
     export.save_merged(a.model, a.adapter, a.out)
@@ -174,10 +187,10 @@ def cmd_job(a):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="npu-lora", description="LoRA fine-tuning on AOT-compiled NPUs")
+    ap = argparse.ArgumentParser(prog="npu-lora", description="LoRA and full fine-tuning on AOT-compiled NPUs")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    t = sub.add_parser("train", help="LoRA 학습")
+    t = sub.add_parser("train", help="LoRA 또는 --full 전체 파인튜닝")
     _common(t)
     t.add_argument("--data", required=True, help="JSONL: text | prompt/response | messages")
     t.add_argument("--out", required=True, help="PEFT 어댑터 출력 디렉터리")
@@ -201,6 +214,12 @@ def main(argv=None):
     c.add_argument("--layers", type=int, default=2)
     c.add_argument("--full", action="store_true", help="전체 파인튜닝 기울기(레이어 가중치)를 비교")
     c.set_defaults(fn=cmd_check)
+
+    cc = sub.add_parser("compile", help="장치 없이 학습 그래프를 미리 컴파일(캐시만 채움)")
+    _common(cc)
+    cc.add_argument("--full", action="store_true")
+    cc.add_argument("--accum", type=int, default=1)
+    cc.set_defaults(fn=cmd_compile)
 
     m = sub.add_parser("merge", help="어댑터를 base 가중치에 합친다")
     m.add_argument("--model", required=True)

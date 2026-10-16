@@ -69,12 +69,18 @@ class FuriosaBackend(Backend):
     """FuriosaAI RNGD. furiosa-torch 의 CompileModule 로 그래프를 컴파일한다."""
     name = "furiosa"
 
-    def __init__(self, chip=0, cache_dir=None, tactic="ForMiscModel", fusion=8, mesh=2, max_shapes=8):
+    def __init__(self, chip=0, cache_dir=None, tactic="ForMiscModel", fusion=8, mesh=2, max_shapes=8,
+                 compile_only=False):
         import furiosa.torch  # noqa: F401 — torch 다음, 다른 furiosa import 보다 먼저
         # 컴파일러는 ~/.cache/furiosa/compiler 에 내부 캐시를 쓰는데 디렉터리가 없으면 만들지 않고
         # "No such file or directory (os error 2)" 로 실패한다(새 컨테이너에서 첫 컴파일 때).
         os.makedirs(os.path.expanduser("~/.cache/furiosa/compiler"), exist_ok=True)
-        if chip < 0:
+        # compile_only: 장치를 열지 않고 컴파일 캐시만 만든다. 컴파일은 CPU 작업이라 카드가 다른 작업에
+        # 잡혀 있어도, 코어가 많은 다른 노드에서 미리 해 둘 수 있다(캐시 디렉터리를 복사해 쓴다).
+        self.compile_only = compile_only
+        if compile_only:
+            chip = 0
+        elif chip < 0:
             chip = visible_chip()
         self.sdk = _version("furiosa-torch")
         self.new = tuple(int(x) for x in self.sdk.split(".")[:2] if x.isdigit()) >= (2026, 3)
@@ -150,12 +156,13 @@ class FuriosaBackend(Backend):
                 self._save(m, path)
             except Exception as e:
                 print(f"[furiosa] could not cache {key}: {e!r}", flush=True)
-        m.to(self.dev)
+        if not self.compile_only:
+            m.to(self.dev)
         print(f"[furiosa] {key}: {mode} {time.time() - t0:.0f}s", flush=True)
         return m
 
     def to_device(self, t):
-        return t.to(self.dev)
+        return t if self.compile_only else t.to(self.dev)
 
     def to_host(self, t):
         return t.cpu()
