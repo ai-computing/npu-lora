@@ -228,7 +228,7 @@ def main(argv=None):
     m.set_defaults(fn=cmd_merge)
 
     sv = sub.add_parser("serve", help="어댑터를 실행 중인 vLLM 에 올린다(재시작 없음)")
-    sv.add_argument("--endpoint", required=True, help="vLLM 주소, 예 http://192.0.2.2:8000")
+    sv.add_argument("--endpoint", required=True, help="vLLM 주소, 예 http://<vllm-host>:8000")
     sv.add_argument("--name", required=True, help="서빙 이름 = 요청의 model 값")
     sv.add_argument("--path", default=None, help="vLLM 컨테이너 안 어댑터 경로")
     sv.add_argument("--unload", action="store_true")

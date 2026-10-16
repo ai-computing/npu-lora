@@ -1,0 +1,20 @@
+name: npu-lora
+layer: l3-serving
+kind: workload
+summary: 추론 전용 NPU(FuriosaAI RNGD)에서 Llama 계열 LoRA·전체 파인튜닝을 하고 vLLM/llm-d가 바로 읽는 HF 산출물을 만드는 학습 워크로드
+maturity: prototype
+hardware: [RNGD]
+install:
+  - python -m pip install -e .
+test:
+  - python tests/test_cpu.py
+deploy:
+  target: k8s
+  manifests: null             # `npu-lora job ... | kubectl apply -f -` 로 Job 매니페스트를 생성한다
+  image: null                 # 공식 furiosaai/furiosa-llm 이미지 + ConfigMap 으로 패키지를 올린다
+config:
+  env_example: cluster.example.env
+interfaces:
+  provides: [Workload, Metrics]
+  uses: []
+kpi: [이종자원수]
