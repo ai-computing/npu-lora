@@ -31,6 +31,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--label", default="base", help="이 모델(어댑터 없음)의 이름")
     ap.add_argument("--max-lora-rank", type=int, default=64)
+    ap.add_argument("--gpu-mem", type=float, default=0.85, help="vLLM gpu_memory_utilization")
     a = ap.parse_args()
 
     from vllm import LLM, SamplingParams
@@ -38,7 +39,7 @@ def main():
 
     adapters = [x.split("=", 1) for x in a.adapter]
     llm = LLM(model=a.model, enable_lora=bool(adapters), max_lora_rank=a.max_lora_rank, max_loras=max(1, len(adapters)),
-              max_model_len=2048, gpu_memory_utilization=0.85, enforce_eager=False)
+              max_model_len=2048, gpu_memory_utilization=a.gpu_mem, enforce_eager=False)
     tok = llm.get_tokenizer()
     sp = SamplingParams(temperature=0, max_tokens=8)
     variants = [(a.label, None)] + [(n, LoRARequest(n, i + 1, p)) for i, (n, p) in enumerate(adapters)]

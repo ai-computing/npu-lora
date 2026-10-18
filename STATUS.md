@@ -2,11 +2,11 @@
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
 - **State**: active
-- **Updated**: 2026-10-16 14:10+09:00
+- **Updated**: 2026-10-16 18:50+09:00
 - **Agent**: claude@gspark-PowerEdge-R7525
-- **Task**: 8B full fine tuning과 A100 비교
-- **Last result**: 1B full FT(과제만): NSMC RNGD 79.8% / A100 78.5% (기본 62.8%), MMLU 20.25% / 8.5% (기본 43.25%) — 양쪽 같은 과적합 망각. RNGD 기울기 점검 PASS(최대 2.1%). replay(Alpaca 1:1) 재실험: RNGD NSMC 78.2%, MMLU 36.25%, A100 대조 진행 중
-- **Next**: A100 replay 결과 비교, offload 파이프라인으로 8B full FT 측정
+- **Task**: NPUTRAIN-19
+- **Last result**: 8B full FT RNGD 1장 accum 4: 13.13 s/step(2048 tok) = 156 tok/s, accum 1(49.6 tok/s)의 3.1배. 전송 고정비 ~8.6 s는 그대로
+- **Next**: A100 8B full FT 대조(e11 GPU 비면); 카드 2장 레이어 분할(NPUTRAIN-18)
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -20,7 +20,7 @@
 
 - **2026-10-16 · RNGD LoRA 학습 품질이 A100 학습과 같다.** Llama-3.1-8B, S=128, r=16 q·v, lr 2e-4, 400 step × accum 4, 같은 데이터와 시드로 비교했다. NSMC 시험(n=1000)은 기본 79.6%, RNGD 87.5%, A100 87.6%였다. MMLU(n=400)는 기본 60.8%, RNGD와 A100 모두 63.0%였다. loss 곡선 40 step 구간 평균의 상대차 중앙값은 2.8%, 마지막 구간은 0.0676 대 0.0667이었다. 평가는 `npu_lora.bench`(vLLM 오프라인 엔진, temperature 0), 곡선 비교는 `npu_lora.compare`로 했다 (`README.md` 「품질 검증」).
 - **2026-10-16 · 품질 검증 중 버그 2건을 고쳤다.** llama3 `rope_scaling`이 적용되지 않았다(HF 대비 오차 1.8e-4 → 3.5e-7). 긴 예제는 응답째 잘렸다(이제 프롬프트 쪽을 덜어낸다) (`README.md`).
-- **full fine-tuning 모드가 있고 1B로만 실증했다.** `--full`(lmd-top `--set full=true`)은 레이어 가중치 9종을 학습하고 임베딩·lm_head는 고정한다. 결과는 HF 전체 모델로 저장한다 (`npu_lora/cli.py`, `trainer.py`, `export.py` `save_full`). 8B는 128 GB가 필요해 카드 1장으로 할 수 없어서 `unsloth/Llama-3.2-1B-Instruct`로 실증했다. 1B 기본 성능은 NSMC 62.8%, MMLU 43.3%였다. RNGD 기울기 점검은 최대 2.1%로 통과했고, step은 약 5 s였다(대부분 9.7억 파라미터 host AdamW). 이 수치들은 2026-10-15 작업 세션 기록이고 레포에 원자료는 없다. 한 과제로만 full FT를 하면 모든 질문에 그 과제 형식으로 답하는 망각이 생겼다(1B MMLU 43% → 8~20%). 그래서 범용 지시문(Alpaca)을 1:1로 섞는 replay 데이터를 만들었다 (`examples/nsmc.py`). RNGD 대 A100 full FT 비교 수치는 아직 없다.
+- **full fine-tuning 모드가 있고 1B로만 실증했다.** `--full`(lmd-top `--set full=true`)은 레이어 가중치 9종을 학습하고 임베딩·lm_head는 고정한다. 결과는 HF 전체 모델로 저장한다 (`npu_lora/cli.py`, `trainer.py`, `export.py` `save_full`). 품질 비교는 `unsloth/Llama-3.2-1B-Instruct`로 했다(8B는 아래 오프로드 항목). 1B 기본 성능은 NSMC 62.8%, MMLU 43.3%였다. RNGD 기울기 점검은 최대 2.1%로 통과했고, step은 약 5 s였다(대부분 9.7억 파라미터 host AdamW). 이 수치들은 2026-10-15 작업 세션 기록이고 레포에 원자료는 없다. 한 과제로만 full FT를 하면 모든 질문에 그 과제 형식으로 답하는 망각이 생겼다(1B MMLU 43% → 8~20%). 그래서 범용 지시문(Alpaca)을 1:1로 섞는 replay 데이터를 만들었다 (`examples/nsmc.py`). 같은 조건(1B, replay, 800 step)에서 RNGD는 NSMC 78.2%·MMLU 36.25%, A100은 79.0%·36.75%였고, loss 곡선 상대차는 1.2%였다. RNGD full FT는 GPU와 같은 품질을 낸다 (`experiments/2026-10-16-full1b-nsmc-replay.md`). 오프로드 파이프라인 적용 후 RNGD 1B step은 3.85 s다.
 - **2026-10-15 · RNGD 1장으로 Llama-3.1-8B 32층 LoRA 학습 PoC를 마쳤다.** 0.7 s/step(약 180 tok/s)였고 200 step에 2분 36초, loss 3.29 → ~0이었다. 학습에 없는 질문은 0/10에서 10/10이 됐다(A100 vLLM 런타임 LoRA로 평가, CUDA 백엔드 학습도 10/10). RNGD 대 CPU 기울기는 cos ≥ 0.9997, 상대오차 ≤ 2.5%(Llama-3.1-8B 2층 + 128k 어휘 head, loss 1.9e-4)였다. 함수형 Llama 대 HF loss 상대오차는 1.7e-5였다 (`README.md` 「검증 결과」).
 - **컴파일 비용과 구조.** 첫 컴파일에 약 1.5시간이 걸리고, 이후에는 EDF 캐시(15 MB)로 바로 시작한다. Llama-8B 레이어는 순전파 8조각, 역전파 19조각으로 컴파일해 32층과 모든 어휘 조각에 재사용한다. 어댑터(r=16, q·v)는 13.6 MB라 host AdamW(fp32) 왕복 비용이 작다 (`README.md` 「왜 NPU 에서 학습이 되나」).
 - **furiosa-torch 2026.2 컴파일러 우회를 14종 썼다.** 그중 3종은 "조용히 틀린 값"을 낸다: 조각 출력 전치, 컴파일 샘플 입력 stride 고정, make_fx 중복 입력 병합. 이 경우는 컴파일 오류로 드러나지 않아 `npu_lora.diagnose.compare_parts`로 조각마다 CPU와 비교해 잡는다 (`README.md` 「컴파일러 우회」).
@@ -28,7 +28,7 @@
 
 ## Open questions
 
-- **8B full fine-tuning을 어떻게 나눌지 정하지 않았다.** 128 GB가 필요해 여러 RNGD 카드에 나눠야 한다. A100 대비 속도·품질 비교 조건도 미정이다. 1B full FT의 RNGD 대 A100 같은 조건 비교가 먼저다.
+- **8B full fine-tuning은 카드 1장 + CPU 오프로드로 돈다.** fp32 master·AdamW 상태(~100 GB)는 host, 카드에는 bf16 가중치와 누적 기울기(32 GB)만 둔다. S=512 accum 1에서 10.33 s/step이고, 장치 계산은 ~1.5 s, 나머지는 기울기 D2H(3.1 GB/s)·가중치 H2D 전송이다 (`experiments/2026-10-16-full8b-offload-step.md`). accum 4로 전송 고정비(~8.6 s)를 나누면 2,048 토큰 13.13 s, 156 tok/s(3.1배)다. 더 빠르게 하려면 카드 2장에 레이어를 나눠 PCIe 링크를 두 개 쓴다. A100 대비 비교는 e11 GPU가 비면 한다.
 - **첫 컴파일에 1.5시간이 든다.** 우회 패스가 다른 모델과 SDK(예: Furiosa 2026.4)에서도 일반화되는지 확인하지 않았다 (`README.md`).
 - **지원 범위가 좁다.** 지금은 Llama 계열(GQA, RoPE, SwiGLU)만 된다. micro-batch는 시퀀스 1개이고, 시퀀스 길이는 컴파일 시점에 고정된다 (`README.md` 「한계」).
 - **RBLN(ATOM) 백엔드가 없다.** 같은 방식(`rebel.compile_from_torch`)이 가능하지만 이 클러스터의 RBLN 컴파일 경로가 고장 나 있어 넣지 않았다 (`README.md` 「한계」, `lmd-top/docs/RBLN-COMPILE-INCIDENT.md`).
@@ -39,6 +39,50 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-16 18:50+09:00 — NPUTRAIN-19
+
+- Result: 8B full FT RNGD 1장 accum 4: 13.13 s/step(2048 tok) = 156 tok/s, accum 1(49.6 tok/s)의 3.1배. 전송 고정비 ~8.6 s는 그대로
+- Next: A100 8B full FT 대조(e11 GPU 비면); 카드 2장 레이어 분할(NPUTRAIN-18)
+- Metrics: step_time_s=13.13
+- Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=4, device=rngd, node=e11, offload=pipeline4
+- Artifacts: experiments/data/pipe8b4-rngd.jsonl
+- Experiments: experiments/2026-10-16-full8b-offload-step.md
+- By: claude@gspark-PowerEdge-R7525 · main@5de85aa-dirty
+
+### 2026-10-16 17:02+09:00 — NPUTRAIN-19
+
+- Result: 8B full FT가 RNGD 1장에서 돈다: S=512 accum1 10.33 s/step(49.6 tok/s). 계산 ~1.5 s, 나머지는 기울기 14 GB D2H(3.1 GB/s)+가중치 H2D 전송 대기 — PCIe 병목
+- Next: accum 4 그래프 컴파일(etri-001, ~2h) 후 step 측정; 2카드 레이어 분할로 링크 2개 활용
+- Metrics: step_time_s=10.33
+- Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=1, device=rngd, node=e11, offload=pipeline4
+- Artifacts: experiments/data/pipe8b-rngd.jsonl
+- Experiments: experiments/2026-10-16-full8b-offload-step.md
+- By: claude@gspark-PowerEdge-R7525 · main@5de85aa-dirty
+
+### 2026-10-16 15:52+09:00 — NPUTRAIN-26 ✅
+
+- Result: 민감정보 제거·ai-rm.yaml·README ai-rm 절 추가, checker clean, push ad02402. examples/cluster_facts.py IP 3개(NAS·게이트웨이·Prometheus)를 MODEL_STORE_NAS_HOST/LLMD_GATEWAY_HOST/PROMETHEUS_HOST/PORT 환경변수(cluster.local.env)로, cli.py serve 예시 IP를 <vllm-host>로 교체. 생성 데이터는 이전과 동일 확인
+- Next: lmd-top 내 vendored 사본도 같은 수정 필요(다른 agent). 정적 k8s 매니페스트·전용 이미지 없음
+- New todos: deploy/k8s 정적 Job 매니페스트(kustomize) 추가
+- By: claude@gspark-PowerEdge-R7525 · main@ad02402-dirty
+
+### 2026-10-16 15:07+09:00 — NPUTRAIN-17 ✅
+
+- Result: replay 레시피 1B full FT: RNGD NSMC 78.2%/MMLU 36.25% vs A100 79.0%/36.75%, loss 상대차 1.2%. 과제만 학습 비교(79.8/20.25 vs 78.5/8.5)도 기록
+- Next: NPUTRAIN-19: 8B full FT step 시간 측정
+- Experiments: experiments/2026-10-16-full1b-nsmc-replay.md, experiments/2026-10-16-full1b-nsmc-task-only.md
+- By: claude@gspark-PowerEdge-R7525 · main@0534900-dirty
+
+### 2026-10-16 15:06+09:00 — 전체 파인튜닝 구현·검증
+
+- Result: 1B full FT replay(NSMC+Alpaca 1:1): RNGD NSMC 78.2%/MMLU 36.25% vs A100 79.0%/36.75%, loss 곡선 상대차 1.2% — RNGD 전체 FT가 GPU와 같은 품질
+- Next: 8B 전체 FT 컴파일 완료 후 e11 RNGD에서 오프로드 파이프라인 step 시간 측정
+- Metrics: nsmc_accuracy_pct=78.2, mmlu_accuracy_pct=36.25, step_time_s=3.85
+- Params: model=Llama-3.2-1B-Instruct, mode=full, seq_len=128, accum=4, steps=800, lr=1e-5, data=nsmc+alpaca_1to1, device=rngd
+- Artifacts: experiments/data/fullmix-rngd.jsonl, experiments/data/fullmix-cuda.jsonl
+- Experiments: experiments/2026-10-16-full1b-nsmc-replay.md
+- By: claude@gspark-PowerEdge-R7525 · main@0534900-dirty
 
 ### 2026-10-16 14:10+09:00 — 8B full fine tuning과 A100 비교
 

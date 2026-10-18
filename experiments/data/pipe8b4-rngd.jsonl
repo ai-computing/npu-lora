@@ -1,0 +1,113 @@
+{"ts": 1792143749.31, "run": "pipe8b4", "event": "start", "examples": 8000, "truncated": 4, "model": "/hf/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659", "config": {"H": 4096, "I": 14336, "nh": 32, "nkv": 8, "n_layers": 32, "vocab": 128256, "rope_theta": 500000.0, "eps": 1e-05, "rope_scaling": [8.0, 1.0, 4.0, 8192]}, "lora": {"r": 16, "alpha": 32.0, "targets": ["q", "v"], "scale": 2.0}, "train": {"seq_len": 512, "lr": 1e-05, "weight_decay": 0.0, "betas": [0.9, 0.999], "grad_clip": 1.0, "accum": 4, "warmup": 10, "steps": 20, "seed": 0, "log_every": 1, "full": true}, "graph_parts_max_mm": 2, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792143751.373, "run": "pipe8b4", "event": "weights_on_device", "layers": 32, "seconds": 2.1}
+{"ts": 1792143760.118, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 1/9 (15 ops) 0s"}
+{"ts": 1792143760.119, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 2/9 (1 ops) 0s"}
+{"ts": 1792143760.137, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 3/9 (5 ops) 0s"}
+{"ts": 1792143760.173, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 4/9 (6 ops) 0s"}
+{"ts": 1792143760.219, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 5/9 (12 ops) 0s"}
+{"ts": 1792143760.243, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 6/9 (5 ops) 0s"}
+{"ts": 1792143760.321, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 7/9 (20 ops) 0s"}
+{"ts": 1792143760.402, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 8/9 (14 ops) 0s"}
+{"ts": 1792143760.437, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 9/9 (4 ops) 0s"}
+{"ts": 1792143765.008, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 1/32 (16 ops) 0s"}
+{"ts": 1792143765.01, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 2/32 (1 ops) 0s"}
+{"ts": 1792143765.025, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 3/32 (5 ops) 0s"}
+{"ts": 1792143765.05, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 4/32 (7 ops) 0s"}
+{"ts": 1792143765.088, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 5/32 (13 ops) 0s"}
+{"ts": 1792143765.104, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 6/32 (6 ops) 0s"}
+{"ts": 1792143765.169, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 7/32 (21 ops) 0s"}
+{"ts": 1792143765.249, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 8/32 (16 ops) 0s"}
+{"ts": 1792143765.302, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 9/32 (7 ops) 0s"}
+{"ts": 1792143765.31, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 10/32 (2 ops) 0s"}
+{"ts": 1792143765.465, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 11/32 (6 ops) 0s"}
+{"ts": 1792143765.478, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 12/32 (2 ops) 0s"}
+{"ts": 1792143765.594, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 13/32 (2 ops) 0s"}
+{"ts": 1792143765.663, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 14/32 (9 ops) 0s"}
+{"ts": 1792143765.673, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 15/32 (2 ops) 0s"}
+{"ts": 1792143765.897, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 16/32 (23 ops) 0s"}
+{"ts": 1792143765.907, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 17/32 (2 ops) 0s"}
+{"ts": 1792143765.958, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 18/32 (9 ops) 0s"}
+{"ts": 1792143766.051, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 19/32 (16 ops) 0s"}
+{"ts": 1792143766.052, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 20/32 (1 ops) 0s"}
+{"ts": 1792143766.07, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 21/32 (4 ops) 0s"}
+{"ts": 1792143766.074, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 22/32 (3 ops) 0s"}
+{"ts": 1792143766.089, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 23/32 (5 ops) 0s"}
+{"ts": 1792143766.091, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 24/32 (2 ops) 0s"}
+{"ts": 1792143766.114, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 25/32 (2 ops) 0s"}
+{"ts": 1792143766.146, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 26/32 (7 ops) 0s"}
+{"ts": 1792143766.209, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 27/32 (10 ops) 0s"}
+{"ts": 1792143766.221, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 28/32 (1 ops) 0s"}
+{"ts": 1792143766.239, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 29/32 (2 ops) 0s"}
+{"ts": 1792143766.282, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 30/32 (12 ops) 0s"}
+{"ts": 1792143766.288, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 31/32 (2 ops) 0s"}
+{"ts": 1792143766.429, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 32/32 (21 ops) 0s"}
+{"ts": 1792143766.639, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] sqnorm-4096x4096 1/1 (3 ops) 0s"}
+{"ts": 1792143766.746, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] sqnorm-1024x4096 1/1 (3 ops) 0s"}
+{"ts": 1792143767.147, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] sqnorm-14336x4096 1/1 (3 ops) 0s"}
+{"ts": 1792143767.55, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] sqnorm-4096x14336 1/1 (3 ops) 0s"}
+{"ts": 1792143772.879, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 1/39 (16 ops) 0s"}
+{"ts": 1792143772.88, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 2/39 (1 ops) 0s"}
+{"ts": 1792143772.898, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 3/39 (5 ops) 0s"}
+{"ts": 1792143772.932, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 4/39 (7 ops) 0s"}
+{"ts": 1792143772.98, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 5/39 (13 ops) 0s"}
+{"ts": 1792143773.007, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 6/39 (6 ops) 0s"}
+{"ts": 1792143773.072, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 7/39 (21 ops) 0s"}
+{"ts": 1792143773.158, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 8/39 (16 ops) 0s"}
+{"ts": 1792143773.209, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 9/39 (7 ops) 0s"}
+{"ts": 1792143773.218, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 10/39 (2 ops) 0s"}
+{"ts": 1792143773.368, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 11/39 (6 ops) 0s"}
+{"ts": 1792143773.383, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 12/39 (2 ops) 0s"}
+{"ts": 1792143773.531, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 13/39 (2 ops) 0s"}
+{"ts": 1792143773.601, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 14/39 (9 ops) 0s"}
+{"ts": 1792143773.612, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 15/39 (2 ops) 0s"}
+{"ts": 1792143773.849, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 16/39 (23 ops) 0s"}
+{"ts": 1792143773.857, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 17/39 (2 ops) 0s"}
+{"ts": 1792143773.922, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 18/39 (9 ops) 0s"}
+{"ts": 1792143773.991, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 19/39 (16 ops) 0s"}
+{"ts": 1792143773.992, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 20/39 (1 ops) 0s"}
+{"ts": 1792143774.002, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 21/39 (4 ops) 0s"}
+{"ts": 1792143774.004, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 22/39 (3 ops) 0s"}
+{"ts": 1792143774.017, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 23/39 (5 ops) 0s"}
+{"ts": 1792143774.018, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 24/39 (2 ops) 0s"}
+{"ts": 1792143774.035, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 25/39 (2 ops) 0s"}
+{"ts": 1792143774.061, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 26/39 (7 ops) 0s"}
+{"ts": 1792143774.112, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 27/39 (10 ops) 0s"}
+{"ts": 1792143774.116, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 28/39 (1 ops) 0s"}
+{"ts": 1792143774.128, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 29/39 (2 ops) 0s"}
+{"ts": 1792143774.172, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 30/39 (12 ops) 0s"}
+{"ts": 1792143774.181, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 31/39 (3 ops) 0s"}
+{"ts": 1792143774.318, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 32/39 (22 ops) 0s"}
+{"ts": 1792143774.321, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 33/39 (1 ops) 0s"}
+{"ts": 1792143774.33, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 34/39 (1 ops) 0s"}
+{"ts": 1792143774.338, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 35/39 (1 ops) 0s"}
+{"ts": 1792143774.345, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 36/39 (1 ops) 0s"}
+{"ts": 1792143774.361, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 37/39 (1 ops) 0s"}
+{"ts": 1792143774.384, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 38/39 (1 ops) 0s"}
+{"ts": 1792143774.409, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 39/39 (1 ops) 0s"}
+{"ts": 1792143774.708, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-rms 1/1 (8 ops) 0s"}
+{"ts": 1792143775.082, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-stats 1/1 (12 ops) 0s"}
+{"ts": 1792143775.536, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-grad 1/2 (12 ops) 0s"}
+{"ts": 1792143775.551, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-grad 2/2 (2 ops) 0s"}
+{"ts": 1792143776.238, "run": "pipe8b4", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-rms-bwd 1/1 (24 ops) 0s"}
+{"ts": 1792143776.238, "run": "pipe8b4", "event": "compiled", "seconds": 17.5, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792143781.021, "run": "pipe8b4", "event": "step", "step": 1, "loss": 1.7196997702121735, "grad_norm": 63.230920974824826, "lr": 1.0000000000000002e-06, "tokens": 2048, "seconds": 4.709, "tokens_per_s": 434.9, "wait_weights_s": 0.0, "norm_s": 0.029, "prev_d2h_s": 0.0, "prev_adamw_s": 0.0, "prev_upload_s": 0.0}
+{"ts": 1792143797.473, "run": "pipe8b4", "event": "step", "step": 2, "loss": 1.563365787267685, "grad_norm": 45.36251693313697, "lr": 2.0000000000000003e-06, "tokens": 2048, "seconds": 16.448, "tokens_per_s": 124.5, "wait_weights_s": 11.635, "norm_s": 0.039, "prev_d2h_s": 19.182, "prev_adamw_s": 19.703, "prev_upload_s": 8.337}
+{"ts": 1792143811.89, "run": "pipe8b4", "event": "step", "step": 3, "loss": 1.0892033018171787, "grad_norm": 84.19709703188227, "lr": 3.0000000000000005e-06, "tokens": 2048, "seconds": 14.411, "tokens_per_s": 142.1, "wait_weights_s": 9.724, "norm_s": 0.039, "prev_d2h_s": 19.132, "prev_adamw_s": 9.652, "prev_upload_s": 10.242}
+{"ts": 1792143824.259, "run": "pipe8b4", "event": "step", "step": 4, "loss": 1.1038060262799263, "grad_norm": 20.670203139733406, "lr": 4.000000000000001e-06, "tokens": 2048, "seconds": 12.364, "tokens_per_s": 165.6, "wait_weights_s": 8.357, "norm_s": 0.035, "prev_d2h_s": 18.51, "prev_adamw_s": 8.108, "prev_upload_s": 7.845}
+{"ts": 1792143836.661, "run": "pipe8b4", "event": "step", "step": 5, "loss": 1.3417101502418518, "grad_norm": 13.32430480119822, "lr": 5e-06, "tokens": 2048, "seconds": 12.398, "tokens_per_s": 165.2, "wait_weights_s": 8.213, "norm_s": 0.027, "prev_d2h_s": 16.491, "prev_adamw_s": 7.296, "prev_upload_s": 9.462}
+{"ts": 1792143849.897, "run": "pipe8b4", "event": "step", "step": 6, "loss": 1.6966634392738342, "grad_norm": 16.36471107097472, "lr": 6.000000000000001e-06, "tokens": 2048, "seconds": 13.232, "tokens_per_s": 154.8, "wait_weights_s": 8.649, "norm_s": 0.03, "prev_d2h_s": 17.648, "prev_adamw_s": 8.023, "prev_upload_s": 9.059}
+{"ts": 1792143863.526, "run": "pipe8b4", "event": "step", "step": 7, "loss": 1.7460168302059174, "grad_norm": 16.317446123735518, "lr": 7.000000000000001e-06, "tokens": 2048, "seconds": 13.627, "tokens_per_s": 150.3, "wait_weights_s": 8.811, "norm_s": 0.034, "prev_d2h_s": 18.069, "prev_adamw_s": 8.406, "prev_upload_s": 9.724}
+{"ts": 1792143876.699, "run": "pipe8b4", "event": "step", "step": 8, "loss": 1.1023198515176773, "grad_norm": 11.99124433790389, "lr": 8.000000000000001e-06, "tokens": 2048, "seconds": 13.165, "tokens_per_s": 155.6, "wait_weights_s": 8.461, "norm_s": 0.033, "prev_d2h_s": 18.036, "prev_adamw_s": 8.13, "prev_upload_s": 8.515}
+{"ts": 1792143889.964, "run": "pipe8b4", "event": "step", "step": 9, "loss": 0.88221525400877, "grad_norm": 11.131021150773991, "lr": 9e-06, "tokens": 2048, "seconds": 13.259, "tokens_per_s": 154.5, "wait_weights_s": 8.442, "norm_s": 0.043, "prev_d2h_s": 18.018, "prev_adamw_s": 7.061, "prev_upload_s": 9.101}
+{"ts": 1792143903.836, "run": "pipe8b4", "event": "step", "step": 10, "loss": 1.1067906892858446, "grad_norm": 9.957236512525148, "lr": 1e-05, "tokens": 2048, "seconds": 13.866, "tokens_per_s": 147.7, "wait_weights_s": 9.185, "norm_s": 0.036, "prev_d2h_s": 19.765, "prev_adamw_s": 8.267, "prev_upload_s": 9.155}
+{"ts": 1792143916.97, "run": "pipe8b4", "event": "step", "step": 11, "loss": 1.182830959558487, "grad_norm": 10.334931324379088, "lr": 9.755282581475769e-06, "tokens": 2048, "seconds": 13.129, "tokens_per_s": 156.0, "wait_weights_s": 8.611, "norm_s": 0.032, "prev_d2h_s": 18.81, "prev_adamw_s": 6.696, "prev_upload_s": 9.247}
+{"ts": 1792143930.254, "run": "pipe8b4", "event": "step", "step": 12, "loss": 1.1588421314954758, "grad_norm": 16.084446398167792, "lr": 9.045084971874738e-06, "tokens": 2048, "seconds": 13.282, "tokens_per_s": 154.2, "wait_weights_s": 8.809, "norm_s": 0.025, "prev_d2h_s": 19.154, "prev_adamw_s": 6.841, "prev_upload_s": 9.485}
+{"ts": 1792143943.314, "run": "pipe8b4", "event": "step", "step": 13, "loss": 1.3791400492191315, "grad_norm": 9.927548942070612, "lr": 7.938926261462366e-06, "tokens": 2048, "seconds": 13.057, "tokens_per_s": 156.9, "wait_weights_s": 8.66, "norm_s": 0.027, "prev_d2h_s": 18.871, "prev_adamw_s": 6.785, "prev_upload_s": 9.662}
+{"ts": 1792143955.766, "run": "pipe8b4", "event": "step", "step": 14, "loss": 1.171673372387886, "grad_norm": 25.059780938055102, "lr": 6.545084971874738e-06, "tokens": 2048, "seconds": 12.445, "tokens_per_s": 164.6, "wait_weights_s": 8.271, "norm_s": 0.032, "prev_d2h_s": 17.07, "prev_adamw_s": 6.407, "prev_upload_s": 9.601}
+{"ts": 1792143969.243, "run": "pipe8b4", "event": "step", "step": 15, "loss": 1.0562353432178497, "grad_norm": 10.157952135944125, "lr": 5e-06, "tokens": 2048, "seconds": 13.472, "tokens_per_s": 152.0, "wait_weights_s": 8.651, "norm_s": 0.039, "prev_d2h_s": 17.88, "prev_adamw_s": 5.948, "prev_upload_s": 10.264}
+{"ts": 1792143982.855, "run": "pipe8b4", "event": "step", "step": 16, "loss": 1.2809618711471558, "grad_norm": 9.96149520710526, "lr": 3.4549150281252635e-06, "tokens": 2048, "seconds": 13.608, "tokens_per_s": 150.5, "wait_weights_s": 8.824, "norm_s": 0.031, "prev_d2h_s": 18.794, "prev_adamw_s": 6.903, "prev_upload_s": 9.71}
+{"ts": 1792143995.838, "run": "pipe8b4", "event": "step", "step": 17, "loss": 1.1389634311199188, "grad_norm": 12.749077492553539, "lr": 2.061073738537635e-06, "tokens": 2048, "seconds": 12.98, "tokens_per_s": 157.8, "wait_weights_s": 8.72, "norm_s": 0.024, "prev_d2h_s": 18.251, "prev_adamw_s": 7.542, "prev_upload_s": 9.579}
+{"ts": 1792144008.449, "run": "pipe8b4", "event": "step", "step": 18, "loss": 1.4390240907669067, "grad_norm": 8.980972328066002, "lr": 9.549150281252633e-07, "tokens": 2048, "seconds": 12.605, "tokens_per_s": 162.5, "wait_weights_s": 8.313, "norm_s": 0.026, "prev_d2h_s": 17.656, "prev_adamw_s": 7.137, "prev_upload_s": 8.482}
+{"ts": 1792144021.098, "run": "pipe8b4", "event": "step", "step": 19, "loss": 0.8193508461117744, "grad_norm": 8.385735804910892, "lr": 2.447174185242324e-07, "tokens": 2048, "seconds": 12.643, "tokens_per_s": 162.0, "wait_weights_s": 8.317, "norm_s": 0.025, "prev_d2h_s": 16.785, "prev_adamw_s": 6.776, "prev_upload_s": 9.122}
+{"ts": 1792144033.628, "run": "pipe8b4", "event": "step", "step": 20, "loss": 1.5605025887489319, "grad_norm": 8.432891075575636, "lr": 0.0, "tokens": 2048, "seconds": 12.527, "tokens_per_s": 163.5, "wait_weights_s": 8.326, "norm_s": 0.033, "prev_d2h_s": 17.182, "prev_adamw_s": 7.265, "prev_upload_s": 9.037}
+{"ts": 1792144053.419, "run": "pipe8b4", "event": "done", "out": "/tmp/out8b", "steps": 20, "best_loss": 0.8193508461117744, "mode": "full"}

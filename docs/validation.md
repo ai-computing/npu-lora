@@ -41,6 +41,7 @@ Llama 3.x 의 llama3 `rope_scaling` 미적용(HF 대비 1.8e-4 → 3.5e-7), 긴 
 | RNGD full FT, NSMC 만 | 79.8% | 20.25% | 과제 하나로 전체 학습 → 모든 질문에 과제 형식으로 답하는 망각 |
 | A100 full FT, NSMC 만 | 78.5% | 8.5% | 같은 망각(장치 문제가 아님) |
 | RNGD full FT, NSMC + Alpaca 1:1 | 78.2% | 36.25% | replay 로 망각이 크게 줄었다 |
+| A100 full FT, NSMC + Alpaca 1:1 | 79.0% | 36.75% | RNGD 와 오차 범위 안 (loss 곡선 상대차 1.2%) |
 
 RNGD 전체 파인튜닝 기울기 점검(`npu-lora check --full`, 2층): loss 상대오차 3.8e-5, 가중치 기울기 최대 2.1%.
 자세한 조건은 `experiments/2026-10-16-full1b-nsmc-task-only.md`.
