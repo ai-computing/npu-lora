@@ -240,6 +240,8 @@ Research code from the ETRI llm-d cluster. Current state and open questions are 
   `workload=train`, `model`, `vendor`, `run_id`; runner 반환값에도 들어 있다). 정확도 `accuracy_pct`는
   `npu_lora.bench` 결과 JSON의 `measurements`(태그 `dataset=nsmc|mmlu`, `run_id`=변형 이름)에 있다.
   rm-core에 없는 양은 `npu_lora_*`로 낸다(`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds` 등).
+  **Deprecated**: 예전 처리량 시리즈 `npu_lora_tokens_per_second`(라벨 `run`)는 `airm_tok_s`와 같은 값으로
+  프로토콜 0.2 전까지만 함께 낸다(PROTOCOL §6 이행 규칙). 소비자는 `airm_tok_s`를 먼저 읽고 없을 때만 예전 이름을 쓴다.
   step 시간의 공통 이름은 rm-core 후보 `step_ms`다. `power_w`는 아직 내지 않는다.
   장치는 `furiosa.ai/rngd` 리소스와 `NPU_LORA_RNGD`/`NPU_LORA_RNGD_FILE`로 고른다.
 - **KPI**: 이종자원수 — 추론 전용 NPU를 학습 자원으로 쓴다. RNGD 학습 품질이 A100과 같음을
