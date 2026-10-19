@@ -155,7 +155,7 @@ Frequently used training options:
 | `--accum` | 1 | Gradient accumulation (micro-batch = one packed sequence) |
 | `--full` | off | Full fine-tuning of decoder-layer weights |
 | `--max-mm` | 2 on RNGD | Matmuls per compiled graph part |
-| `--metrics-port` | — | Serve Prometheus metrics (`npu_lora_loss`, `npu_lora_tokens_per_second`, …) |
+| `--metrics-port` | — | Serve Prometheus metrics (`airm_tok_s`, `npu_lora_loss`, `npu_lora_step_seconds`, …) |
 
 Training progress is also written as JSON lines to stdout and `--log-file`.
 
@@ -206,13 +206,44 @@ Research code from the ETRI llm-d cluster. Current state and open questions are 
   ServiceMonitor를 만들고 결과를 공유 모델 스토어 PVC(`model-store`)에 쓴다. 산출 어댑터는 vLLM
   `--enable-lora`와 llm-d LoRA 라우팅이 그대로 읽고, `npu-lora serve`로 실행 중인 vLLM에 재시작 없이 올린다.
   lmd-top은 `lmd-top --plan train`으로 같은 Job을 만든다.
-  아직 없는 것: 레포에 커밋된 정적 매니페스트(kustomize 디렉터리)와 전용 컨테이너 이미지. 매니페스트는
-  CLI가 그때그때 생성한다.
+  ai-rm umbrella chart는 Helm chart [`deploy/helm/npu-lora`](deploy/helm/npu-lora)를 쓴다. 이 chart는
+  `train.backend`(`rngd|cuda|cpu`)에 따라 노드를 `airm.ai-computing.io/<vendor>.<model>` 레이블로 고르고
+  (rngd: `airm.ai-computing.io/furiosa.RNGD`, 그 외는 `nodeAffinity`로 지정), 데이터·체크포인트·캐시를
+  모델 스토어 PVC(`store.pvc`)에 둔다. 이미지에 npu-lora가 없으면 시작할 때 `install.pip`로 설치한다.
+  지표 포트에는 `airm.ai-computing.io/scrape: "true"` 어노테이션이 붙는다.
+  `helm template deploy/helm/npu-lora --set train.model=… --set train.data=…`
 - **설치·테스트**: `python -m pip install -e .`, `python tests/test_cpu.py`(CPU 회귀 테스트, NPU 불필요,
-  PyTorch 필요). RNGD 학습에는 Furiosa SDK(`furiosa-torch`)가 필요하다.
-- **인터페이스**: 제공 `Workload`(학습 Job), `Metrics`(`--metrics-port` Prometheus 지표 `npu_lora_loss`,
-  `npu_lora_tokens_per_second` 등과 ServiceMonitor). 다른 ai-rm 구성요소의 인터페이스는 아직 쓰지 않는다
-  (장치는 `furiosa.ai/rngd` 리소스와 `NPU_LORA_RNGD`/`NPU_LORA_RNGD_FILE`로 직접 고른다).
+  PyTorch 필요), `python tests/test_airm.py`(ai-rm runner, CPU), `python -m rm_core.conformance`.
+  RNGD 학습에는 Furiosa SDK(`furiosa-torch`)가 필요하다.
+- **protocol v0.1 adapter**: `airm.workloads` 이름 `npu-lora`(`npu_lora.airm:train`). 기존 `npu-lora train`을
+  감쌀 뿐 학습 경로는 같다.
+
+  ```python
+  from rm_core import Workload, registry
+  run = registry.load("airm.workloads", "npu-lora", backend="rngd")    # 생성자 kwargs = 설정 기본값
+  res = run(Workload(kind="train", model="meta-llama/Llama-3.1-8B-Instruct"),
+            data="/mnt/store/datasets/nsmc.jsonl", out="/mnt/store/adapters/nsmc", dataset="nsmc", steps=400)
+  res["measurements"]      # [Measurement("tok_s", …, tags={"workload": "train", "dataset": "nsmc", …})]
+  ```
+
+  `Workload`는 `kind="train"`, `precision="bf16"`만 받는다(다르면 `ContractError`). 설정 키:
+
+  | 키 | 뜻 (기본값) |
+  | --- | --- |
+  | `data`, `out` | 필수. 학습 JSONL, 출력 디렉터리 |
+  | `backend` | `rngd`·`rngd:N`·`cuda[:N]`·`cpu` (`rngd`) |
+  | `dataset` | 지표 태그 `dataset` 값 (없음) |
+  | `rank`, `alpha`, `targets`, `seq_len`, `steps`, `accum`, `lr`, `warmup`, `grad_clip`, `seed`, `full`, `save_every`, `merge_out`, `run_name`, `log_file`, `metrics_port`, `cache_dir`, `tactic`, `max_shapes`, `max_mm` | `npu-lora train`의 같은 이름 옵션 |
+  | `kv_transport` | 학습에는 KV 경로가 없다. 비워 둔다(주면 `ContractError`) |
+
+- **지표**(rm-core `METRICS` 이름): 학습 처리량 `tok_s`(Prometheus `airm_tok_s`, 태그 `component=npu-lora`,
+  `workload=train`, `model`, `vendor`, `run_id`; runner 반환값에도 들어 있다). 정확도 `accuracy_pct`는
+  `npu_lora.bench` 결과 JSON의 `measurements`(태그 `dataset=nsmc|mmlu`, `run_id`=변형 이름)에 있다.
+  rm-core에 없는 양은 `npu_lora_*`로 낸다(`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds` 등).
+  **Deprecated**: 예전 처리량 시리즈 `npu_lora_tokens_per_second`(라벨 `run`)는 `airm_tok_s`와 같은 값으로
+  프로토콜 0.2 전까지만 함께 낸다(PROTOCOL §6 이행 규칙). 소비자는 `airm_tok_s`를 먼저 읽고 없을 때만 예전 이름을 쓴다.
+  step 시간의 공통 이름은 rm-core 후보 `step_ms`다. `power_w`는 아직 내지 않는다.
+  장치는 `furiosa.ai/rngd` 리소스와 `NPU_LORA_RNGD`/`NPU_LORA_RNGD_FILE`로 고른다.
 - **KPI**: 이종자원수 — 추론 전용 NPU를 학습 자원으로 쓴다. RNGD 학습 품질이 A100과 같음을
   [docs/validation.md](docs/validation.md)에서 확인했다.
 - **`cluster.local.env`**: 라이브러리와 CLI는 사이트 값을 쓰지 않는다(`--endpoint` 등은 인자로 받는다).

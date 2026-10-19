@@ -1,0 +1,6 @@
+apiVersion: v2
+name: npu-lora
+description: LoRA / full fine-tuning Job on AOT-compiled NPUs (FuriosaAI RNGD), CUDA or CPU
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

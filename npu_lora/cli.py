@@ -32,6 +32,11 @@ def _backend(a):
     return backends.make(a.backend, **kw)
 
 
+def vendor(backend):
+    """백엔드 지정 → ai-rm vendor 이름(rm_core.accelerator.VENDORS)."""
+    return {"furiosa": "furiosa", "rngd": "furiosa", "cuda": "nvidia", "cpu": "cpu"}.get(backend.partition(":")[0], "other")
+
+
 def _lora(a):
     from .trainer import LoRAConfig
     return LoRAConfig(r=a.rank, alpha=a.alpha, targets=tuple(a.targets.split(",")))
@@ -45,9 +50,11 @@ def cmd_train(a):
     from .trainer import LoRATrainer, TrainConfig
 
     run = a.run_name or f"lora-{time.strftime('%Y%m%d-%H%M%S')}"
-    rep = Reporter(run, labels={"model": os.path.basename(a.model.rstrip("/")), "backend": a.backend,
-                                "host": socket.gethostname()},
-                   log_file=a.log_file, port=a.metrics_port)
+    model = os.path.basename(a.model.rstrip("/"))
+    rep = Reporter(run, labels={"model": model, "backend": a.backend, "host": socket.gethostname()},
+                   log_file=a.log_file, port=a.metrics_port,
+                   airm_tags={"component": "npu-lora", "workload": "train", "model": model,
+                              "vendor": vendor(a.backend), "run_id": run})
     tc = TrainConfig(seq_len=a.seq_len, lr=a.lr, steps=a.steps, accum=a.accum, warmup=a.warmup,
                      grad_clip=a.grad_clip, seed=a.seed, full=a.full)
     tr = LoRATrainer(a.model, _backend(a), _lora(a), tc, log=lambda s: rep.event("log", **json.loads(s)),
@@ -58,10 +65,13 @@ def cmd_train(a):
     tr.setup()
     rep.set("npu_lora_steps_planned", a.steps)
     best = None
+    tokens, seconds = 0, 0.0
     for batch in ds.batches(a.accum, a.steps):
         m = tr.train_step(batch)
         rep.step(m)
         best = m["loss"] if best is None else min(best, m["loss"])
+        tokens += m["tokens"]
+        seconds += m["seconds"]
         if a.save_every and m["step"] % a.save_every == 0 and not a.full:
             export.save_peft(tr, os.path.join(a.out, f"step-{m['step']}"), a.model)
     extra = {"final_step": tr.step_no, "best_loss": best, "run": run}
@@ -69,10 +79,12 @@ def cmd_train(a):
         export.save_full(tr, a.out, extra=extra)
     else:
         export.save_peft(tr, a.out, a.model, extra=extra)
-    rep.event("done", out=a.out, steps=tr.step_no, best_loss=best, mode="full" if a.full else "lora")
+    done = {"out": a.out, "steps": tr.step_no, "best_loss": best, "mode": "full" if a.full else "lora"}
+    rep.event("done", **done)
     if a.merge_out and not a.full:
         export.save_merged(a.model, a.out, a.merge_out)
         rep.event("merged", out=a.merge_out)
+    return {**done, "run": run, "tokens": tokens, "seconds": seconds}
 
 
 def cmd_check(a):
@@ -186,7 +198,7 @@ def cmd_job(a):
     print(k8s.to_yaml(docs))
 
 
-def main(argv=None):
+def parser():
     ap = argparse.ArgumentParser(prog="npu-lora", description="LoRA and full fine-tuning on AOT-compiled NPUs")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -259,8 +271,11 @@ def main(argv=None):
     j.add_argument("--cache-host-path", default=None, help="컴파일 캐시를 노드 hostPath 에 두기")
     j.add_argument("--merge", action="store_true", help="합친 모델도 출력(NPU 서빙용)")
     j.set_defaults(fn=cmd_job)
+    return ap
 
-    a = ap.parse_args(argv)
+
+def main(argv=None):
+    a = parser().parse_args(argv)
     a.fn(a)
 
 

@@ -8,6 +8,9 @@ vLLM 이미지(GPU)에서 돈다. 한 번 실행에 모델 하나, 그 위에 Lo
 
 과제 JSONL: {"prompt", "expect"}. 채점: nsmc 는 답에 처음 나오는 '긍정'/'부정' 이 정답인지,
 mmlu 는 답에 처음 나오는 A–D 글자가 정답인지(생성 길이 8, temperature 0).
+
+결과 JSON 의 "measurements" 는 ai-rm 공통 지표 accuracy_pct(태그 dataset=과제 이름, run_id=변형 이름)다 —
+report.py --metric 과 rm_core.metrics.Measurement 에 그대로 넣는다(이 모듈은 vLLM 이미지에서 돌아 rm_core 를 쓰지 않는다).
 """
 import argparse
 import json
@@ -59,7 +62,12 @@ def main():
                             for r, ans in list(zip(rows, answers))[:5]]}
             print(json.dumps({"variant": vname, "task": tname, "accuracy": results[vname][tname]["accuracy"]}),
                   flush=True)
-    json.dump({"model": a.model, "results": results}, open(a.out, "w"), ensure_ascii=False, indent=1)
+    model = a.model.rstrip("/").split("/")[-1]
+    measurements = [{"name": "accuracy_pct", "value": round(100 * r["accuracy"], 2),
+                     "tags": {"component": "npu-lora", "model": model, "dataset": tname, "run_id": vname}}
+                    for vname, tasks in results.items() for tname, r in tasks.items()]
+    json.dump({"model": a.model, "results": results, "measurements": measurements}, open(a.out, "w"),
+              ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
