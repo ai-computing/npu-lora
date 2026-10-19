@@ -251,6 +251,12 @@ def test_qwen3_equivalence():          # per-head q/k norm, head_dim with nh * h
     _family_equivalence("qwen3", dict(head_dim=32, use_sliding_window=False))
 
 
+def test_gemma3_equivalence():         # (1+w) sandwich norms, GELU-tanh, attention scale, sliding + full RoPE bases
+    _family_equivalence("gemma3_text", dict(head_dim=16, query_pre_attn_scalar=24, sliding_window=64,
+                                            layer_types=["sliding_attention", "full_attention"],
+                                            rope_local_base_freq=10000.0))
+
+
 def test_mistral_equivalence():
     _family_equivalence("mistral", dict(sliding_window=None))
 
