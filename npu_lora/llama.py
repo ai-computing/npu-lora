@@ -15,17 +15,33 @@ BF = torch.bfloat16
 
 # 레이어 그래프에 넘기는 고정 가중치의 순서. HF 키 이름은 load_layer 가 맞춘다.
 LAYER_WEIGHTS = ("ln1", "ln2", "wq", "wk", "wv", "wo", "wg", "wu", "wd")
-HF_NAMES = {"ln1": "input_layernorm", "ln2": "post_attention_layernorm",
+#: optional per-layer tensors of other families: q/k/v biases (Qwen2), per-head q/k RMSNorm weights (Qwen3)
+OPTIONAL_WEIGHTS = ("bq", "bk", "bv", "qn", "kn")
+HF_NAMES = {"bq": "self_attn.q_proj.@bias", "bk": "self_attn.k_proj.@bias", "bv": "self_attn.v_proj.@bias",
+            "qn": "self_attn.q_norm", "kn": "self_attn.k_norm",
+            "ln1": "input_layernorm", "ln2": "post_attention_layernorm",
             "wq": "self_attn.q_proj", "wk": "self_attn.k_proj", "wv": "self_attn.v_proj",
             "wo": "self_attn.o_proj", "wg": "mlp.gate_proj", "wu": "mlp.up_proj", "wd": "mlp.down_proj"}
 
 # LoRA 를 붙일 수 있는 투영과 (입력 차원, 출력 차원) 을 정하는 함수
 LORA_TARGETS = {
-    "q": lambda c: (c.H, c.H),
+    "q": lambda c: (c.H, c.q_dim),
     "k": lambda c: (c.H, c.kv_dim),
     "v": lambda c: (c.H, c.kv_dim),
-    "o": lambda c: (c.H, c.H),
+    "o": lambda c: (c.q_dim, c.H),
 }
+
+
+def hf_name(k):
+    """HF tensor name of layer weight k (".weight" unless the name says otherwise)."""
+    n = HF_NAMES[k]
+    return n.replace(".@", ".") if ".@" in n else n + ".weight"
+
+
+def layer_weights(c):
+    """the per-layer tensors this config's layers take, in graph-input order"""
+    extra = (("bq", "bk", "bv") if c.qkv_bias else ()) + (("qn", "kn") if c.qk_norm else ())
+    return LAYER_WEIGHTS + extra
 
 
 @dataclass(frozen=True)
@@ -40,19 +56,39 @@ class LlamaConfig:
     eps: float = 1e-5
     # llama3 rope_scaling: (factor, low_freq_factor, high_freq_factor, original_max_position) 또는 None
     rope_scaling: tuple = None
+    family: str = "llama"          # llama | mistral | qwen2 | qwen3 (same block, the flags below differ)
+    head_dim: int = 0              # 0: H // nh (Qwen3 sets it explicitly: nh * head_dim may differ from H)
+    qkv_bias: bool = False         # Qwen2
+    qk_norm: bool = False          # Qwen3: per-head RMSNorm on q and k before RoPE
 
     @property
     def hd(self):
-        return self.H // self.nh
+        return self.head_dim or self.H // self.nh
+
+    @property
+    def q_dim(self):
+        return self.nh * self.hd
 
     @property
     def kv_dim(self):
         return self.nkv * self.hd
 
+    @property
+    def key(self):
+        """compiled-graph cache key part for the block variant (empty for plain Llama: old caches stay valid)"""
+        if self.family == "llama" and not (self.head_dim or self.qkv_bias or self.qk_norm):
+            return ""
+        return f"-{self.family}-hd{self.hd}-b{int(self.qkv_bias)}-n{int(self.qk_norm)}"
+
     @classmethod
     def from_hf(cls, path):
         c = json.load(open(os.path.join(path, "config.json")))
-        rs = c.get("rope_scaling") or {}
+        family = c.get("model_type", "llama")
+        if family not in ("llama", "mistral", "qwen2", "qwen3"):
+            raise NotImplementedError(f"model_type {family!r}: npu-lora implements llama, mistral, qwen2, qwen3")
+        if c.get("use_sliding_window") or (family == "mistral" and c.get("sliding_window")):
+            raise NotImplementedError("sliding-window attention is not implemented")
+        rs = c.get("rope_scaling") or c.get("rope_parameters") or {}
         kind = rs.get("rope_type", rs.get("type"))
         if kind not in (None, "default", "llama3"):
             raise NotImplementedError(f"rope_scaling {kind!r} is not supported yet")
@@ -61,8 +97,10 @@ class LlamaConfig:
         return cls(H=c["hidden_size"], I=c["intermediate_size"], nh=c["num_attention_heads"],
                    nkv=c.get("num_key_value_heads", c["num_attention_heads"]),
                    n_layers=c["num_hidden_layers"], vocab=c["vocab_size"],
-                   rope_theta=float(c.get("rope_theta", 10000.0)), eps=float(c.get("rms_norm_eps", 1e-5)),
-                   rope_scaling=scaling)
+                   rope_theta=float(c.get("rope_theta", rs.get("rope_theta", 10000.0))),
+                   eps=float(c.get("rms_norm_eps", 1e-5)), rope_scaling=scaling, family=family,
+                   head_dim=int(c.get("head_dim") or 0) if family == "qwen3" else 0,
+                   qkv_bias=family == "qwen2" or bool(c.get("attention_bias", False)), qk_norm=family == "qwen3")
 
 
 def rms(x, g, eps):
@@ -115,14 +153,21 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     # RoPE 는 전치하기 전 [S, heads, hd] 배치에서 건다. 전치한 q 에 걸면 원소별 연산의 두 피연산자
     # 배치가 달라져([nkv,rep,S,hd] vs [S,nkv,rep,hd]) furiosa 가 "verification of operator failed" 로 멈춘다.
     cs, sn = cos.unsqueeze(1), sin.unsqueeze(1)                          # [S, 1, hd]
-    q = rope_mm(proj(x, w["wq"], lora.get("q"), scale).view(S, c.nh, c.hd), cs, sn, rot).transpose(0, 1)
-    k = rope_mm(proj(x, w["wk"], lora.get("k"), scale).view(S, c.nkv, c.hd), cs, sn, rot).transpose(0, 1)
-    v = proj(x, w["wv"], lora.get("v"), scale).view(S, c.nkv, c.hd).transpose(0, 1)
+    q, k, v = proj(x, w["wq"], lora.get("q"), scale), proj(x, w["wk"], lora.get("k"), scale), \
+        proj(x, w["wv"], lora.get("v"), scale)
+    if c.qkv_bias:
+        q, k, v = q + w["bq"], k + w["bk"], v + w["bv"]
+    q, k = q.view(S, c.nh, c.hd), k.view(S, c.nkv, c.hd)
+    if c.qk_norm:                                                        # per head, over hd
+        q, k = rms(q, w["qn"], c.eps), rms(k, w["kn"], c.eps)
+    q = rope_mm(q, cs, sn, rot).transpose(0, 1)
+    k = rope_mm(k, cs, sn, rot).transpose(0, 1)
+    v = v.view(S, c.nkv, c.hd).transpose(0, 1)
     qg = q.reshape(c.nkv, rep * S, c.hd)                                 # [nkv, rep*S, hd]
     att = (qg @ k.transpose(-1, -2)).float().view(c.nkv, rep, S, S) / math.sqrt(c.hd) + mask
     att = torch.softmax(att, -1).to(h.dtype).view(c.nkv, rep * S, S)
     o = (att @ v).view(c.nh, S, c.hd)                                   # [nh, S, hd]
-    o = proj(o.transpose(0, 1).reshape(S, c.H), w["wo"], lora.get("o"), scale)
+    o = proj(o.transpose(0, 1).reshape(S, c.q_dim), w["wo"], lora.get("o"), scale)
     h = h + o
     x = rms(h, w["ln2"], c.eps)
     return h + (F.silu(x @ w["wg"].t()) * (x @ w["wu"].t())) @ w["wd"].t()
@@ -250,8 +295,9 @@ class Weights:
             self._open[fn] = safe_open(os.path.join(self.path, fn), "pt")
         return self._open[fn].get_tensor(name).to(dtype)
 
-    def layer(self, i):
-        return {k: self.get(f"model.layers.{i}.{HF_NAMES[k]}.weight") for k in LAYER_WEIGHTS}
+    def layer(self, i, c=None):
+        keys = layer_weights(c) if c is not None else LAYER_WEIGHTS
+        return {k: self.get(f"model.layers.{i}.{hf_name(k)}") for k in keys}
 
     def embed(self):
         return self.get("model.embed_tokens.weight")

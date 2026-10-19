@@ -92,7 +92,7 @@ def save_full(trainer, out_dir, extra=None):
     from safetensors.torch import save_file
     base = trainer.path
     W = L.Weights(base)
-    new = {f"model.layers.{i}.{L.HF_NAMES[k]}.weight": w for (i, k), w in trainer.layer_weights().items()}
+    new = {f"model.layers.{i}.{L.hf_name(k)}": w for (i, k), w in trainer.layer_weights().items()}
     os.makedirs(out_dir, exist_ok=True)
     by_file = {}
     for name, fn in W.where.items():
