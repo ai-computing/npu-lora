@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>npu-lora</h1>
+<h1>npu-train</h1>
 
 <h3>LoRA and full fine-tuning on inference-only NPUs</h3>
 
@@ -30,7 +30,9 @@
 
 ---
 
-**npu-lora** trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
+Formerly the `npu-lora` repository; the Python package, CLI and Helm chart keep the name `npu-lora`.
+
+**npu-train** (Python package and CLI `npu-lora`) trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
 inference compiler and runtime. It turns the backward pass into ordinary compiled graphs, keeps the
 optimizer on the host, and produces standard Hugging Face artifacts (PEFT adapters or full models)
 that vLLM and llm-d serve as-is. The same code runs on CUDA and CPU for reference runs.
@@ -92,8 +94,8 @@ See [docs/validation.md](docs/validation.md) and [`experiments/`](experiments) f
 ## 🚀 Quick start
 
 ```bash
-git clone https://github.com/ai-computing/npu-lora.git
-cd npu-lora
+git clone https://github.com/ai-computing/npu-train.git
+cd npu-train
 pip install -e .
 ```
 
