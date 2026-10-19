@@ -212,6 +212,49 @@ def test_hf_equivalence():
     assert all(math.isfinite(float(x.norm())) for gl in grads for x in gl)
 
 
+def _family_equivalence(family, extra):
+    """LoRA on q,k,v,o through the functional block vs the merged model in transformers (CPU)."""
+    from transformers import AutoConfig, AutoModelForCausalLM
+    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    d = tempfile.mkdtemp()
+    cfg = AutoConfig.for_model(family, hidden_size=64, intermediate_size=128, num_attention_heads=4,
+                               num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000,
+                               tie_word_embeddings=False, **extra)
+    torch.manual_seed(0)
+    AutoModelForCausalLM.from_config(cfg).to(BF).save_pretrained(os.path.join(d, "base"), safe_serialization=True)
+    tr = LoRATrainer(os.path.join(d, "base"), CPUBackend(), LoRAConfig(r=4, alpha=8, targets=("q", "k", "v", "o")),
+                     TrainConfig(seq_len=32), log=lambda s: None)
+    tr.setup()
+    g = torch.Generator().manual_seed(1)
+    for per in tr.master:
+        for b in per[1::2]:
+            b.detach().normal_(0, 0.05, generator=g)
+    tr._upload_adapters()
+    ids = torch.randint(0, 1000, (32,), generator=g)
+    lab = torch.roll(ids, -1)
+    lab[-1] = -1
+    loss, grads, _ = tr.forward_backward(ids, lab)
+    export.save_peft(tr, os.path.join(d, "ad"))
+    export.save_merged(os.path.join(d, "base"), os.path.join(d, "ad"), os.path.join(d, "merged"))
+    m = AutoModelForCausalLM.from_pretrained(os.path.join(d, "merged"), dtype=torch.float32)
+    with torch.no_grad():
+        hf = m(ids[None], labels=ids[None]).loss.item()
+    assert abs(loss - hf) / hf < 1e-3, (family, loss, hf)
+    assert all(math.isfinite(float(x.norm())) for gl in grads for x in gl)
+
+
+def test_qwen2_equivalence():          # q/k/v biases
+    _family_equivalence("qwen2", dict(use_sliding_window=False))
+
+
+def test_qwen3_equivalence():          # per-head q/k norm, head_dim with nh * head_dim != hidden
+    _family_equivalence("qwen3", dict(head_dim=32, use_sliding_window=False))
+
+
+def test_mistral_equivalence():
+    _family_equivalence("mistral", dict(sliding_window=None))
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in sorted(globals().items()):

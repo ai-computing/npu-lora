@@ -76,8 +76,8 @@ class LoRATrainer:
         self.dev_rot = be.to_device(L.rotate_half_matrix(c.hd))
         self.dev_W = []
         for i in range(c.n_layers):
-            w = self.W.layer(i)
-            self.dev_W.append([be.to_device(w[k]) for k in L.LAYER_WEIGHTS])
+            w = self.W.layer(i, c)
+            self.dev_W.append([be.to_device(w[k]) for k in L.layer_weights(c)])
         self.log(json.dumps({"event": "weights_on_device", "layers": c.n_layers,
                              "seconds": round(time.time() - t0, 1)}))
         self._init_adapters()
@@ -106,8 +106,8 @@ class LoRATrainer:
         """
         c, r = self.c, self.lora.r
         if self.tc.full:
-            self.master = [[self.W.get(f"model.layers.{i}.{L.HF_NAMES[k]}.weight", torch.float32)
-                            for k in L.LAYER_WEIGHTS] for i in range(c.n_layers)]
+            self.master = [[self.W.get(f"model.layers.{i}.{L.hf_name(k)}", torch.float32)
+                            for k in L.layer_weights(c)] for i in range(c.n_layers)]
         else:
             # 전역 난수에 기대지 않는다: furiosa 를 불러오면 torch.manual_seed 가 장치 쪽에서 경고만 내고
             # 끝나, 같은 seed 로 만든 두 trainer 의 A 가 달라졌다(check 가 엉뚱한 차이를 보고).
@@ -155,7 +155,7 @@ class LoRATrainer:
     def _samples(self):
         c, S, r = self.c, self.tc.seq_len, self.lora.r
         h = torch.zeros(S, c.H, dtype=BF)
-        w = [torch.zeros_like(x) for x in self.W.layer(0).values()]
+        w = [torch.zeros_like(x) for x in self.W.layer(0, c).values()]
         ad = []
         for t in (() if self.tc.full else self.lora.targets):
             d_in, d_out = L.LORA_TARGETS[t](c)
@@ -167,8 +167,8 @@ class LoRATrainer:
     def _compile(self):
         c, S, lc = self.c, self.tc.seq_len, self.lora
         h, w, ad, cos, sin, mask, rot = self._samples()
-        key = (f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}-S{S}-full" if self.tc.full else
-               f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}-S{S}-r{lc.r}-{''.join(lc.targets)}-s{lc.scale}")
+        key = (f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}{c.key}-S{S}-full" if self.tc.full else
+               f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}{c.key}-S{S}-r{lc.r}-{''.join(lc.targets)}-s{lc.scale}")
         targets, scale = ((), 1.0) if self.tc.full else (lc.targets, lc.scale)
         lay_in = [h, *w, *ad, cos, sin, mask, rot]
         t0 = time.time()
@@ -396,7 +396,7 @@ class LoRATrainer:
         """{(layer, LAYER_WEIGHTS 키): fp32 가중치} — 전체 파인튜닝 모드에서만."""
         assert self.tc.full
         self.sync_params()
-        return {(i, k): p.detach() for i, per in enumerate(self.master) for k, p in zip(L.LAYER_WEIGHTS, per)}
+        return {(i, k): p.detach() for i, per in enumerate(self.master) for k, p in zip(L.layer_weights(self.c), per)}
 
     def summary(self):
         return {"model": self.path, "config": asdict(self.c), "lora": {**asdict(self.lora), "scale": self.lora.scale},
