@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>npu-lora</h1>
+<h1>npu-train</h1>
 
 <h3>추론 전용 NPU에서 LoRA와 전체 파인튜닝</h3>
 
@@ -29,6 +29,8 @@
 </div>
 
 ---
+
+이전 저장소 이름은 `npu-lora`입니다. Python 패키지, CLI, Helm chart 이름은 `npu-lora` 그대로입니다.
 
 **npu-lora**는 FuriosaAI RNGD에서 Llama 계열 모델을 학습한다. RNGD의 SDK는 추론용 컴파일러와 런타임만
 제공한다. npu-lora는 역전파를 일반 컴파일 그래프로 바꾸고, optimizer는 host에서 돌리며, vLLM과 llm-d가 그대로
@@ -91,8 +93,8 @@ RNGD와 A100에서 같은 데이터·시드·하이퍼파라미터(Llama-3.1-8B-
 ## 🚀 빠른 시작
 
 ```bash
-git clone https://github.com/ai-computing/npu-lora.git
-cd npu-lora
+git clone https://github.com/ai-computing/npu-train.git
+cd npu-train
 pip install -e .
 ```
 
