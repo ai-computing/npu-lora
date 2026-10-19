@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "LoRA fine-tuning on ahead-of-time compiled NPUs (FuriosaAI RNGD), with CPU/CUDA reference backends"
 requires-python = ">=3.10"
 dependencies = ["torch>=2.4", "safetensors", "transformers", "huggingface_hub",
-                "rm-core @ git+https://github.com/ai-computing/rm-core@v0.1.0"]
+                "rm-core @ git+https://github.com/ai-computing/rm-core@v0.1.1"]
 
 [project.optional-dependencies]
 # furiosa-torch 는 Furiosa SDK 와 함께 설치된다(PyPI 버전 고정 필요 없음).

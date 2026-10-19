@@ -81,7 +81,8 @@ def test_prometheus_uses_airm_name_and_tag_keys():
     lines = [l for l in rep._render().splitlines() if l.startswith(prometheus_name("tok_s") + "{")]
     assert lines == ['airm_tok_s{component="npu-lora",workload="train",run_id="r"} 64.0']
     assert set(rep.airm_tags) <= set(TAG_KEYS)
-    assert "npu_lora_tokens_per_second" not in rep._render()
+    # deprecated 이름은 프로토콜 0.2 전까지 같은 값으로 남는다(PROTOCOL §6 이행 규칙)
+    assert 'npu_lora_tokens_per_second{run="r"} 64.0' in rep._render().splitlines()
 
 
 if __name__ == "__main__":
