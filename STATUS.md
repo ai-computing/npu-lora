@@ -1,44 +1,69 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: active
-- **Updated**: 2026-10-16 18:50+09:00
+- **State**: idle
+- **Updated**: 2026-10-19 09:53+09:00
 - **Agent**: claude@gspark-PowerEdge-R7525
-- **Task**: NPUTRAIN-19
-- **Last result**: 8B full FT RNGD 1장 accum 4: 13.13 s/step(2048 tok) = 156 tok/s, accum 1(49.6 tok/s)의 3.1배. 전송 고정비 ~8.6 s는 그대로
-- **Next**: A100 8B full FT 대조(e11 GPU 비면); 카드 2장 레이어 분할(NPUTRAIN-18)
+- **Task**: NPUTRAIN-32 (done)
+- **Last result**: PR #1 갱신(931a189, airm/v0.1): npu_lora_tokens_per_second를 airm_tok_s와 함께 프로토콜 0.2 전까지 재출력(README deprecated 표시), rm-core v0.1.1. 검증: conformance PASS 3/FAIL 0, test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean. airm.workloads conformance는 0.1.1에서도 KeyError(NPUTRAIN-31)
+- **Next**: PR 머지 후 lmd-top을 airm_tok_s 우선 읽기로 전환(NPUTRAIN-30), 프로토콜 0.2에서 예전 시리즈 제거
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
 ## Goal
 
-추론 전용 AOT 컴파일 NPU인 Furiosa RNGD에서 LoRA와 full fine-tuning을 실용 수준으로 돌리고, 같은 조건의 A100 학습과 품질·속도를 비교한다. 구현은 llm-d 레포의 `npu-lora/` 패키지(`npu_lora`, 백엔드 furiosa/cuda/cpu)다. 결과를 llm-d 서빙(vLLM `--enable-lora`)과 lmd-top(`--plan train`)에 붙이는 것까지 범위에 넣는다 (`npu-lora/README.md`).
+추론 전용 AOT 컴파일 NPU인 Furiosa RNGD에서 LoRA와 full fine-tuning을 실용 수준으로 돌리고, 같은 조건의 A100 학습과 품질·속도를 비교한다. 구현은 공개 저장소 [ai-computing/npu-lora](https://github.com/ai-computing/npu-lora)의 `npu_lora` 패키지(백엔드 furiosa/cuda/cpu)다. 결과를 llm-d 서빙(vLLM `--enable-lora`)과 lmd-top(`--plan train`)에 붙이고, ai-rm 구성요소(`ai-rm.yaml`, protocol 0.1)로 내는 것까지 범위에 넣는다 (`README.md`).
 
 ## Findings
 
 최신순. 출처를 괄호에 적었다. 레포에 원자료가 없는 수치는 그렇다고 밝혔다.
 
-- **2026-10-16 · RNGD LoRA 학습 품질이 A100 학습과 같다.** Llama-3.1-8B, S=128, r=16 q·v, lr 2e-4, 400 step × accum 4, 같은 데이터와 시드로 비교했다. NSMC 시험(n=1000)은 기본 79.6%, RNGD 87.5%, A100 87.6%였다. MMLU(n=400)는 기본 60.8%, RNGD와 A100 모두 63.0%였다. loss 곡선 40 step 구간 평균의 상대차 중앙값은 2.8%, 마지막 구간은 0.0676 대 0.0667이었다. 평가는 `npu_lora.bench`(vLLM 오프라인 엔진, temperature 0), 곡선 비교는 `npu_lora.compare`로 했다 (`README.md` 「품질 검증」).
-- **2026-10-16 · 품질 검증 중 버그 2건을 고쳤다.** llama3 `rope_scaling`이 적용되지 않았다(HF 대비 오차 1.8e-4 → 3.5e-7). 긴 예제는 응답째 잘렸다(이제 프롬프트 쪽을 덜어낸다) (`README.md`).
-- **full fine-tuning 모드가 있고 1B로만 실증했다.** `--full`(lmd-top `--set full=true`)은 레이어 가중치 9종을 학습하고 임베딩·lm_head는 고정한다. 결과는 HF 전체 모델로 저장한다 (`npu_lora/cli.py`, `trainer.py`, `export.py` `save_full`). 품질 비교는 `unsloth/Llama-3.2-1B-Instruct`로 했다(8B는 아래 오프로드 항목). 1B 기본 성능은 NSMC 62.8%, MMLU 43.3%였다. RNGD 기울기 점검은 최대 2.1%로 통과했고, step은 약 5 s였다(대부분 9.7억 파라미터 host AdamW). 이 수치들은 2026-10-15 작업 세션 기록이고 레포에 원자료는 없다. 한 과제로만 full FT를 하면 모든 질문에 그 과제 형식으로 답하는 망각이 생겼다(1B MMLU 43% → 8~20%). 그래서 범용 지시문(Alpaca)을 1:1로 섞는 replay 데이터를 만들었다 (`examples/nsmc.py`). 같은 조건(1B, replay, 800 step)에서 RNGD는 NSMC 78.2%·MMLU 36.25%, A100은 79.0%·36.75%였고, loss 곡선 상대차는 1.2%였다. RNGD full FT는 GPU와 같은 품질을 낸다 (`experiments/2026-10-16-full1b-nsmc-replay.md`). 오프로드 파이프라인 적용 후 RNGD 1B step은 3.85 s다.
-- **2026-10-15 · RNGD 1장으로 Llama-3.1-8B 32층 LoRA 학습 PoC를 마쳤다.** 0.7 s/step(약 180 tok/s)였고 200 step에 2분 36초, loss 3.29 → ~0이었다. 학습에 없는 질문은 0/10에서 10/10이 됐다(A100 vLLM 런타임 LoRA로 평가, CUDA 백엔드 학습도 10/10). RNGD 대 CPU 기울기는 cos ≥ 0.9997, 상대오차 ≤ 2.5%(Llama-3.1-8B 2층 + 128k 어휘 head, loss 1.9e-4)였다. 함수형 Llama 대 HF loss 상대오차는 1.7e-5였다 (`README.md` 「검증 결과」).
-- **컴파일 비용과 구조.** 첫 컴파일에 약 1.5시간이 걸리고, 이후에는 EDF 캐시(15 MB)로 바로 시작한다. Llama-8B 레이어는 순전파 8조각, 역전파 19조각으로 컴파일해 32층과 모든 어휘 조각에 재사용한다. 어댑터(r=16, q·v)는 13.6 MB라 host AdamW(fp32) 왕복 비용이 작다 (`README.md` 「왜 NPU 에서 학습이 되나」).
-- **furiosa-torch 2026.2 컴파일러 우회를 14종 썼다.** 그중 3종은 "조용히 틀린 값"을 낸다: 조각 출력 전치, 컴파일 샘플 입력 stride 고정, make_fx 중복 입력 병합. 이 경우는 컴파일 오류로 드러나지 않아 `npu_lora.diagnose.compare_parts`로 조각마다 CPU와 비교해 잡는다 (`README.md` 「컴파일러 우회」).
-- **llm-d·lmd-top 연동.** 출력은 HF PEFT 형식이라 vLLM `--enable-lora`와 llm-d LoRA 라우팅이 그대로 읽는다. `npu-lora job`과 `lmd-top --plan train`으로 클러스터 Job을 만든다(lmd-top 쪽 연동은 미커밋, `lmd-top/STATUS.md`). `--metrics-port`로 Prometheus 지표(`npu_lora_loss`, `npu_lora_tokens_per_second` 등)를 내고, `npu-lora job`이 ServiceMonitor도 만든다 (`README.md` 「사용」「관측」). CPU 회귀 테스트는 `tests/test_cpu.py`에 10개 있다.
+- **2026-10-19 · ai-rm protocol v0.1 통합이 main에 머지됐다**(PR #1, merge `f9b7bc5`; ai-rm이 이 커밋을 고정). workload runner `npu_lora.airm:train`, 처리량 지표 `airm_tok_s`, Helm 차트 `deploy/helm/npu-lora`가 들어갔다. 예전 시리즈 `npu_lora_tokens_per_second`는 deprecated이고 프로토콜 0.2 전까지만 함께 낸다 (`README.md` 「ai-rm」, `npu_lora/airm.py`, `tests/test_airm.py`).
+- **2026-10-16 · RNGD LoRA 학습 품질이 A100 학습과 같다.** Llama-3.1-8B, S=128, r=16 q·v, lr 2e-4, 400 step × accum 4, 같은 데이터와 시드로 비교했다. NSMC 시험(n=1000)은 기본 79.6%, RNGD 87.5%, A100 87.6%였다. MMLU(n=400)는 기본 60.8%, RNGD와 A100 모두 63.0%였다. loss 곡선 40 step 구간 평균의 상대차 중앙값은 2.8%, 마지막 구간은 0.0676 대 0.0667이었다. 평가는 `npu_lora.bench`(vLLM 오프라인 엔진, temperature 0), 곡선 비교는 `npu_lora.compare`로 했다 (`experiments/2026-10-16-nsmc-lora-rngd-vs-a100.md`, `docs/validation.md`).
+- **2026-10-16 · 품질 검증 중 버그 2건을 고쳤다.** llama3 `rope_scaling`이 적용되지 않았다(HF 대비 오차 1.8e-4 → 3.5e-7). 긴 예제는 응답째 잘렸다(이제 프롬프트 쪽을 덜어낸다) (`docs/validation.md`).
+- **full fine-tuning 모드가 있고 1B로 품질을 실증했다.** `--full`(lmd-top `--set full=true`)은 레이어 가중치 9종을 학습하고 임베딩·lm_head는 고정한다. 결과는 HF 전체 모델로 저장한다 (`npu_lora/cli.py`, `trainer.py`, `export.py` `save_full`). 품질 비교는 `unsloth/Llama-3.2-1B-Instruct`로 했다(8B는 아래 오프로드 항목). 1B 기본 성능은 NSMC 62.8%, MMLU 43.25%였다. RNGD 기울기 점검(`npu-lora check --full`, 2층)은 최대 2.1%로 통과했고, 동기 갱신 step은 약 5 s였다 (`experiments/2026-10-16-full1b-nsmc-task-only.md`). 한 과제로만 full FT를 하면 모든 질문에 그 과제 형식으로 답하는 망각이 생겼다(1B MMLU 43% → RNGD 20.25%, A100 8.5%). 그래서 범용 지시문(Alpaca)을 1:1로 섞는 replay 데이터를 만들었다 (`examples/nsmc.py`). 같은 조건(1B, replay, 800 step)에서 RNGD는 NSMC 78.2%·MMLU 36.25%, A100은 79.0%·36.75%였고, loss 곡선 상대차는 1.2%였다. RNGD full FT는 GPU와 같은 품질을 낸다. 오프로드 파이프라인 적용 후 RNGD 1B step은 3.85 s다 (`experiments/2026-10-16-full1b-nsmc-replay.md`).
+- **2026-10-15 · RNGD 1장으로 Llama-3.1-8B 32층 LoRA 학습 PoC를 마쳤다.** 0.7 s/step(약 180 tok/s)였고 200 step에 2분 36초, loss 3.29 → ~0이었다. 학습에 없는 질문은 0/10에서 10/10이 됐다(A100 vLLM 런타임 LoRA로 평가, CUDA 백엔드 학습도 10/10). RNGD 대 CPU 기울기는 cos ≥ 0.9997, 상대오차 ≤ 2.5%(Llama-3.1-8B 2층 + 128k 어휘 head, loss 1.9e-4)였다. 함수형 Llama 대 HF loss 상대오차는 1.7e-5였다 (`docs/validation.md` 「PoC」; 별도 experiments/ 기록은 없다).
+- **컴파일 비용과 구조.** 첫 컴파일에 약 1.5시간이 걸리고, 이후에는 EDF 캐시(15 MB)로 바로 시작한다 (`docs/validation.md`). 그래프는 행렬곱 2개 단위 조각으로 컴파일해 32층과 모든 어휘 조각에 재사용한다 (`docs/design.md`). Llama-8B 레이어가 순전파 8조각, 역전파 19조각이라는 수치와 어댑터(r=16, q·v) 13.6 MB는 import 당시 README(`ef0b8ee`)에만 있고 현재 문서에서는 빠졌다.
+- **furiosa-torch 2026.2 컴파일러 문제와 대응을 15건 정리했다.** 그중 3건은 "조용히 틀린 값"을 낸다: 조각 출력 전치, 컴파일 샘플 입력 stride 고정, make_fx 중복 입력 병합. 이 경우는 컴파일 오류로 드러나지 않아 `npu_lora.diagnose.compare_parts`로 조각마다 CPU와 비교해 잡는다 (`docs/compiler-workarounds.md`).
+- **llm-d·lmd-top 연동.** 출력은 HF PEFT 형식이라 vLLM `--enable-lora`와 llm-d LoRA 라우팅이 그대로 읽는다. `npu-lora job`, Helm 차트, `lmd-top --plan train`으로 클러스터 Job을 만든다. `--metrics-port`로 Prometheus 지표(`airm_tok_s`, `npu_lora_loss`, `npu_lora_step_seconds` 등)를 내고, `npu-lora job`이 ServiceMonitor도 만든다 (`README.md` 「Commands」「ai-rm」). lmd-top은 아직 예전 `npu_lora_tokens_per_second`를 읽는다(NPUTRAIN-30). 테스트는 `tests/test_cpu.py` 11개, `tests/test_airm.py` 4개다.
 
 ## Open questions
 
-- **8B full fine-tuning은 카드 1장 + CPU 오프로드로 돈다.** fp32 master·AdamW 상태(~100 GB)는 host, 카드에는 bf16 가중치와 누적 기울기(32 GB)만 둔다. S=512 accum 1에서 10.33 s/step이고, 장치 계산은 ~1.5 s, 나머지는 기울기 D2H(3.1 GB/s)·가중치 H2D 전송이다 (`experiments/2026-10-16-full8b-offload-step.md`). accum 4로 전송 고정비(~8.6 s)를 나누면 2,048 토큰 13.13 s, 156 tok/s(3.1배)다. 더 빠르게 하려면 카드 2장에 레이어를 나눠 PCIe 링크를 두 개 쓴다. A100 대비 비교는 e11 GPU가 비면 한다.
-- **첫 컴파일에 1.5시간이 든다.** 우회 패스가 다른 모델과 SDK(예: Furiosa 2026.4)에서도 일반화되는지 확인하지 않았다 (`README.md`).
-- **지원 범위가 좁다.** 지금은 Llama 계열(GQA, RoPE, SwiGLU)만 된다. micro-batch는 시퀀스 1개이고, 시퀀스 길이는 컴파일 시점에 고정된다 (`README.md` 「한계」).
-- **RBLN(ATOM) 백엔드가 없다.** 같은 방식(`rebel.compile_from_torch`)이 가능하지만 이 클러스터의 RBLN 컴파일 경로가 고장 나 있어 넣지 않았다 (`README.md` 「한계」, `lmd-top/docs/RBLN-COMPILE-INCIDENT.md`).
-- **Job 구성에 제약이 있다.** furiosa-torch는 privileged 컨테이너에서만 장치를 연다. 그래서 init 컨테이너가 배정 카드를 적고 학습 컨테이너가 서수(`rngd:N`)를 쓴다 (`README.md`).
+- **8B full fine-tuning은 카드 1장 + CPU 오프로드로 돈다.** fp32 master·AdamW 상태(~100 GB)는 host, 카드에는 bf16 가중치와 누적 기울기(32 GB)만 둔다. 커밋된 기록은 S=512 accum 1 10.33 s/step(49.6 tok/s), accum 4 13.13 s/step(156 tok/s)이다 (`experiments/2026-10-16-full8b-offload-step.md`). 2026-10-19 후속 측정(같은 파일의 미커밋 절)에서는 상주 host 버퍼로 RNGD accum 1 128 tok/s, accum 4 315 tok/s, 같은 코드의 A100은 153 / 477 tok/s였고 loss는 두 장치가 일치했다. 처음 병목은 PCIe가 아니라 `t.cpu()`가 매번 host 메모리를 새로 잡는 비용이었다(3.0 → 19.9 GB/s). 남은 ~3 s 고정비는 host AdamW와 전송이 나눠 갖는다.
+- **미커밋 작업이 남아 있다.** 8B full FT 오프로드의 상주 host 버퍼·CUDA 복사 stream(`npu_lora/backends.py` `host_buffer`/`to_host(out=)`, `npu_lora/trainer.py` 레이어별 버퍼), 그 설명(`docs/design.md`), A100 대조와 전송 개선 결과(`experiments/2026-10-16-full8b-offload-step.md` 후속 절, `experiments/data/{old8b-rngd,buf8b-rngd,full8b-cuda,full8b-cudapin,full8b-cudabuf}.jsonl`)가 main(`f9b7bc5`) 위에 커밋되지 않은 채 있다.
+- **첫 컴파일에 1.5시간이 든다.** 우회 패스가 다른 모델과 SDK(예: Furiosa 2026.4)에서도 일반화되는지 확인하지 않았다 (`docs/validation.md`, `docs/compiler-workarounds.md`).
+- **지원 범위가 좁다.** 지금은 Llama 계열(GQA, RoPE, SwiGLU)만 된다. micro-batch는 시퀀스 1개이고, 시퀀스 길이는 컴파일 시점에 고정된다 (`README.md` 「Limitations」).
+- **RBLN(ATOM) 백엔드가 없다.** 같은 방식(`rebel.compile_from_torch`)이 가능하지만 이 클러스터의 RBLN 컴파일 경로가 고장 나 있어 넣지 않았다 (`README.md` 「Limitations」, llm-d-setup 레포 `lmd-top/docs/RBLN-COMPILE-INCIDENT.md`).
+- **Job 구성에 제약이 있다.** furiosa-torch는 privileged 컨테이너에서만 장치를 연다. 그래서 init 컨테이너가 배정 카드를 적고 학습 컨테이너가 서수(`rngd:N`)를 쓴다 (`docs/design.md`).
 - **새 모델마다 검증이 필요하다.** 조용히 틀리는 컴파일 결과는 오류로 드러나지 않으므로 `npu-lora check`와 `diagnose.compare_parts`를 매번 돌려야 한다.
-- **`npu-lora/`가 아직 레포에 커밋되지 않았다**(`git status`: `?? npu-lora/`). `experiments/`에는 템플릿뿐이라 위 측정의 실험 기록이 없다.
+- **실험 기록 범위.** `experiments/`에는 LoRA 품질 비교, 1B full FT 2건(과제만·replay), 8B 오프로드 step 측정의 기록 4건과 원자료(`experiments/data/`)가 있다. 2026-10-15 LoRA PoC 수치는 `docs/validation.md`에만 있고 별도 실험 기록은 없다.
 
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-19 09:53+09:00 — NPUTRAIN-32 ✅
+
+- Result: PR #1 갱신(931a189, airm/v0.1): npu_lora_tokens_per_second를 airm_tok_s와 함께 프로토콜 0.2 전까지 재출력(README deprecated 표시), rm-core v0.1.1. 검증: conformance PASS 3/FAIL 0, test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean. airm.workloads conformance는 0.1.1에서도 KeyError(NPUTRAIN-31)
+- Next: PR 머지 후 lmd-top을 airm_tok_s 우선 읽기로 전환(NPUTRAIN-30), 프로토콜 0.2에서 예전 시리즈 제거
+- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
+
+### 2026-10-19 09:45+09:00 — NPUTRAIN-19
+
+- Result: 8B full FT S=512 accum4: RNGD 315 tok/s vs A100 477 tok/s(같은 오프로드 코드, loss 일치). 상주 host 버퍼로 RNGD 2.1배(t.cpu() D2H 3.0→19.9 GB/s), A100은 복사 stream+pinned로 2.7배
+- Next: 품질 비교(8B full FT 학습 후 NSMC/MMLU) 또는 AdamW 고정비 줄이기; 카드 2장 분할(NPUTRAIN-18)
+- Metrics: step_time_s=6.49
+- Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=4, device=rngd, a100_tok_s=476.9, rngd_tok_s=315.5, offload=resident-buffers
+- Artifacts: experiments/data/buf8b-rngd.jsonl, experiments/data/full8b-cudabuf.jsonl
+- Experiments: experiments/2026-10-16-full8b-offload-step.md
+- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
+
+### 2026-10-19 09:13+09:00 — NPUTRAIN-29 ✅
+
+- Result: PR https://github.com/ai-computing/npu-lora/pull/1 — airm.workloads:npu-lora runner(npu_lora.airm:train), airm_tok_s/accuracy_pct, deploy/helm/npu-lora, ai-rm.yaml protocol 0.1. conformance: 기본 실행 PASS 3/FAIL 0, rm-core v0.1에 workloads 검사가 없어 그룹 지정 시 rm-core KeyError. test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean
+- Next: PR 리뷰·머지; lmd-top collect.rs를 airm_tok_s(run_id)로 바꾼 뒤 재vendoring
+- New todos: lmd-top: npu_lora_tokens_per_second → airm_tok_s(run_id 라벨)로 읽고 npu-lora 재vendoring; rm-core: conformance에 airm.workloads 검사 추가(지금은 KeyError), step_ms 지표 후보 제안
+- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
 
 ### 2026-10-16 18:50+09:00 — NPUTRAIN-19
 
