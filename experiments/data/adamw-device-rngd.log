@@ -1,0 +1,39 @@
+[adamw] layer 0: 218.1M params, shapes [(4096,), (4096,), (4096, 4096), (1024, 4096), (1024, 4096), (4096, 4096), (14336, 4096), (14336, 4096), (4096, 14336)]
+[furiosa] adamw-cmp-float32-p0of1-66039e32bc9a: compile 2s
+[compare] part 0: outs=4 errs=['1.12e-09', '0', '0', '0']
+[furiosa] adamw-float32-1x4096: compile 2s
+[adamw] float32 (1, 4096): compiled 1.5s
+[furiosa] adamw-cmp-float32-p0of1-4d360509ebfd: compile 3s
+[compare] part 0: outs=4 errs=['1.43e-09', '0', '0', '0']
+[furiosa] adamw-float32-1024x4096: compile 3s
+[adamw] float32 (1024, 4096): compiled 3.0s
+[furiosa] adamw-cmp-bfloat16-p0of1-17bf6ede7cd6: compile 2s
+[compare] part 0: outs=3 errs=['0', '0', '0']
+[furiosa] adamw-bfloat16-1x4096: compile 2s
+[adamw] bfloat16 (1, 4096): compiled 1.6s
+[furiosa] adamw-cmp-bfloat16-p0of1-a047c79a45d3: compile 3s
+[compare] part 0: outs=3 errs=['0', '0', '0']
+[furiosa] adamw-bfloat16-1024x4096: compile 3s
+[adamw] bfloat16 (1024, 4096): compiled 3.3s
+[adamw] step 1: fp32 dw_cum 2.39e-05 w 1.85e-08 | bf16 dw_cum 0.862 below2^-8 0.792 unchanged 0.702 | bf16 cpu-graph dw_cum 0.862 dev-vs-cpu 8.82e-12
+[adamw] step 2: fp32 dw_cum 1.97e-05 w 2.43e-08 | bf16 dw_cum 0.867 below2^-8 0.852 unchanged 0.787 | bf16 cpu-graph dw_cum 0.867 dev-vs-cpu 5.32e-09
+[adamw] step 3: fp32 dw_cum 1.75e-05 w 2.86e-08 | bf16 dw_cum 0.865 below2^-8 0.873 unchanged 0.820 | bf16 cpu-graph dw_cum 0.865 dev-vs-cpu 1.82e-07
+[adamw] step 4: fp32 dw_cum 1.61e-05 w 3.21e-08 | bf16 dw_cum 0.863 below2^-8 0.883 unchanged 0.837 | bf16 cpu-graph dw_cum 0.863 dev-vs-cpu 1.83e-07
+[adamw] step 5: fp32 dw_cum 1.51e-05 w 3.53e-08 | bf16 dw_cum 0.862 below2^-8 0.890 unchanged 0.847 | bf16 cpu-graph dw_cum 0.862 dev-vs-cpu 1.83e-07
+[adamw] step 6: fp32 dw_cum 1.43e-05 w 3.83e-08 | bf16 dw_cum 0.861 below2^-8 0.894 unchanged 0.855 | bf16 cpu-graph dw_cum 0.861 dev-vs-cpu 1.83e-07
+[adamw] step 7: fp32 dw_cum 1.36e-05 w 4.1e-08 | bf16 dw_cum 0.861 below2^-8 0.897 unchanged 0.860 | bf16 cpu-graph dw_cum 0.861 dev-vs-cpu 2e-07
+[adamw] step 8: fp32 dw_cum 1.31e-05 w 4.36e-08 | bf16 dw_cum 0.86 below2^-8 0.900 unchanged 0.863 | bf16 cpu-graph dw_cum 0.86 dev-vs-cpu 2e-07
+[adamw] step 9: fp32 dw_cum 1.27e-05 w 4.61e-08 | bf16 dw_cum 0.86 below2^-8 0.902 unchanged 0.866 | bf16 cpu-graph dw_cum 0.86 dev-vs-cpu 2.16e-07
+[adamw] step 10: fp32 dw_cum 1.23e-05 w 4.86e-08 | bf16 dw_cum 0.861 below2^-8 0.903 unchanged 0.869 | bf16 cpu-graph dw_cum 0.861 dev-vs-cpu 2.3e-07
+[adamw] step 11: fp32 dw_cum 1.19e-05 w 5.1e-08 | bf16 dw_cum 0.861 below2^-8 0.904 unchanged 0.870 | bf16 cpu-graph dw_cum 0.861 dev-vs-cpu 2.72e-07
+[adamw] step 12: fp32 dw_cum 1.16e-05 w 5.33e-08 | bf16 dw_cum 0.861 below2^-8 0.905 unchanged 0.872 | bf16 cpu-graph dw_cum 0.861 dev-vs-cpu 2.72e-07
+[adamw] step 13: fp32 dw_cum 1.14e-05 w 5.56e-08 | bf16 dw_cum 0.862 below2^-8 0.906 unchanged 0.873 | bf16 cpu-graph dw_cum 0.862 dev-vs-cpu 2.86e-07
+[adamw] step 14: fp32 dw_cum 1.11e-05 w 5.78e-08 | bf16 dw_cum 0.862 below2^-8 0.907 unchanged 0.874 | bf16 cpu-graph dw_cum 0.862 dev-vs-cpu 2.91e-07
+[adamw] step 15: fp32 dw_cum 1.09e-05 w 6.01e-08 | bf16 dw_cum 0.863 below2^-8 0.907 unchanged 0.875 | bf16 cpu-graph dw_cum 0.863 dev-vs-cpu 3.02e-07
+[adamw] step 16: fp32 dw_cum 1.07e-05 w 6.23e-08 | bf16 dw_cum 0.863 below2^-8 0.908 unchanged 0.876 | bf16 cpu-graph dw_cum 0.863 dev-vs-cpu 3.02e-07
+[adamw] step 17: fp32 dw_cum 1.05e-05 w 6.45e-08 | bf16 dw_cum 0.863 below2^-8 0.908 unchanged 0.877 | bf16 cpu-graph dw_cum 0.863 dev-vs-cpu 3.06e-07
+[adamw] step 18: fp32 dw_cum 1.04e-05 w 6.66e-08 | bf16 dw_cum 0.864 below2^-8 0.909 unchanged 0.877 | bf16 cpu-graph dw_cum 0.864 dev-vs-cpu 3.22e-07
+[adamw] step 19: fp32 dw_cum 1.02e-05 w 6.87e-08 | bf16 dw_cum 0.864 below2^-8 0.909 unchanged 0.878 | bf16 cpu-graph dw_cum 0.864 dev-vs-cpu 3.22e-07
+[adamw] step 20: fp32 dw_cum 1.01e-05 w 7.09e-08 | bf16 dw_cum 0.865 below2^-8 0.909 unchanged 0.878 | bf16 cpu-graph dw_cum 0.865 dev-vs-cpu 3.22e-07
+[adamw] time_s {"npu_update_float32": 0.0284, "npu_update_bfloat16": 0.0247, "cpu_fused_adamw": 0.0125, "state_h2d_fp32": 0.4648, "state_d2h_fp32": 0.3865, "state_h2d_bf16": 0.2184, "state_d2h_bf16": 0.182, "grad_d2h_bf16": 0.062, "weight_h2d_bf16": 0.0648, "grad_d2h_bf16_tcpu": 0.1817}
+[adamw] per_layer_s {"cpu_path": 0.1393, "npu_stream_fp32": 0.8797, "npu_stream_bf16": 0.425}

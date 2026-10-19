@@ -1,0 +1,11 @@
+{
+ "npu_update_float32": 0.028,
+ "npu_update_float32+d2h_last_chunk": 0.0297,
+ "d2h_one_chunk_float32": 0.0016,
+ "npu_update_bfloat16": 0.0241,
+ "npu_update_bfloat16+d2h_last_chunk": 0.0248,
+ "d2h_one_chunk_bfloat16": 0.0011,
+ "cpu_fused_adamw_4thr": 0.0261,
+ "cpu_fused_adamw_16thr": 0.0179,
+ "cpu_fused_adamw_48thr": 0.0189
+}

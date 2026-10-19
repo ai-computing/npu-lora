@@ -1,0 +1,323 @@
+{
+ "backend": {
+  "backend": "cpu"
+ },
+ "torch": "2.10.0+cpu",
+ "threads": 48,
+ "args": {
+  "backend": "cpu",
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "layer": 0,
+  "steps": 2,
+  "reps": 2,
+  "lr": 1e-05,
+  "wd": 0.01,
+  "grad_scale": 0.0001,
+  "cache_dir": null,
+  "out": "cpu-smoke.json"
+ },
+ "chunk": [
+  1024,
+  4096
+ ],
+ "layer_params": 218112000,
+ "compile": {
+  "float32": {
+   "1x4096": {
+    "ops": [
+     "_to_copy.default",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "sqrt.default",
+     "sqrt.default",
+     "div.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "div.Tensor",
+     "div.Tensor",
+     "mul.Tensor",
+     "sub.Tensor",
+     "_to_copy.default"
+    ],
+    "compare_parts": [
+     {
+      "part": 0,
+      "n_out": 4,
+      "errs": [
+       0.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "ops": "_to_copy.default mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor mul.Tensor mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor sqrt.default sqrt.default div.Tensor add.Tensor mul.Tensor neg.default add.Tensor mul.Tensor div.Tensor div.Tensor mul.Tensor sub.Tensor _to_copy.default"
+     }
+    ],
+    "compile_s": 0.0
+   },
+   "1024x4096": {
+    "ops": [
+     "_to_copy.default",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "sqrt.default",
+     "sqrt.default",
+     "div.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "div.Tensor",
+     "div.Tensor",
+     "mul.Tensor",
+     "sub.Tensor",
+     "_to_copy.default"
+    ],
+    "compare_parts": [
+     {
+      "part": 0,
+      "n_out": 4,
+      "errs": [
+       0.0,
+       0.0,
+       0.0,
+       0.0
+      ],
+      "ops": "_to_copy.default mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor mul.Tensor mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor sqrt.default sqrt.default div.Tensor add.Tensor mul.Tensor neg.default add.Tensor mul.Tensor div.Tensor div.Tensor mul.Tensor sub.Tensor _to_copy.default"
+     }
+    ],
+    "compile_s": 0.2
+   }
+  },
+  "bfloat16": {
+   "1x4096": {
+    "ops": [
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "sqrt.default",
+     "sqrt.default",
+     "div.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "div.Tensor",
+     "div.Tensor",
+     "mul.Tensor",
+     "sub.Tensor",
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default"
+    ],
+    "compare_parts": [
+     {
+      "part": 0,
+      "n_out": 3,
+      "errs": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "ops": "_to_copy.default _to_copy.default _to_copy.default _to_copy.default mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor mul.Tensor mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor sqrt.default sqrt.default div.Tensor add.Tensor mul.Tensor neg.default add.Tensor mul.Tensor div.Tensor div.Tensor mul.Tensor sub.Tensor _to_copy.default _to_copy.default _to_copy.default"
+     }
+    ],
+    "compile_s": 0.0
+   },
+   "1024x4096": {
+    "ops": [
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "add.Tensor",
+     "sqrt.default",
+     "sqrt.default",
+     "div.Tensor",
+     "add.Tensor",
+     "mul.Tensor",
+     "neg.default",
+     "add.Tensor",
+     "mul.Tensor",
+     "div.Tensor",
+     "div.Tensor",
+     "mul.Tensor",
+     "sub.Tensor",
+     "_to_copy.default",
+     "_to_copy.default",
+     "_to_copy.default"
+    ],
+    "compare_parts": [
+     {
+      "part": 0,
+      "n_out": 3,
+      "errs": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "ops": "_to_copy.default _to_copy.default _to_copy.default _to_copy.default mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor mul.Tensor mul.Tensor neg.default add.Tensor mul.Tensor add.Tensor sqrt.default sqrt.default div.Tensor add.Tensor mul.Tensor neg.default add.Tensor mul.Tensor div.Tensor div.Tensor mul.Tensor sub.Tensor _to_copy.default _to_copy.default _to_copy.default"
+     }
+    ],
+    "compile_s": 0.2
+   }
+  }
+ },
+ "cpu_adamw": "fused",
+ "chain": [
+  {
+   "step": 1,
+   "float32": {
+    "w": 1.8539143198759855e-08,
+    "m": 2.2352902528857155e-07,
+    "v": 1.2919831019260163e-05,
+    "dw_cum": 2.3917829086357617e-05,
+    "per_tensor_dw_cum": [
+     7.489664448767481e-05,
+     4.6443672317294535e-07,
+     2.2537583516945352e-05,
+     2.5799388649872486e-05,
+     1.758583835733076e-05,
+     1.9692096230588975e-05,
+     2.5081913697779095e-05,
+     2.4195395855764283e-05,
+     2.4174745660565936e-05
+    ],
+    "w_bf16_out_vs_cast": 0.0
+   },
+   "bfloat16": {
+    "w": 0.0006682955929809168,
+    "m": 0.0016209622697666902,
+    "v": 0.001626209517882311,
+    "dw_cum": 0.8621854616441318,
+    "per_tensor_dw_cum": [
+     0.8999920887653688,
+     0.997692107304187,
+     0.740431484755461,
+     0.7966062602705786,
+     0.7085523699188224,
+     0.812006801108685,
+     0.8882987126813877,
+     0.8787338620159721,
+     0.8795342169680269
+    ],
+    "frac_update_below_2^-8": 0.7918002605438232,
+    "frac_update_below_2^-9": 0.6274474263191223,
+    "frac_bf16_w_unchanged": 0.701715350151062
+   },
+   "bf16_cpu_graph": {
+    "dw_cum": 0.8621854616441318,
+    "dev_vs_cpu_graph_w": 0.0
+   }
+  },
+  {
+   "step": 2,
+   "float32": {
+    "w": 2.433598722944828e-08,
+    "m": 2.1743927154651762e-07,
+    "v": 1.2922440233421824e-05,
+    "dw_cum": 1.972094090210242e-05,
+    "per_tensor_dw_cum": [
+     5.961139276171196e-05,
+     6.528021601290434e-05,
+     1.9490734630737974e-05,
+     2.2705278778078666e-05,
+     1.4742529058436118e-05,
+     1.6385152060920875e-05,
+     2.0540793276171927e-05,
+     1.9813278536186176e-05,
+     1.9798004036063875e-05
+    ],
+    "w_bf16_out_vs_cast": 0.0
+   },
+   "bfloat16": {
+    "w": 0.001070153796679596,
+    "m": 0.0019251433192180338,
+    "v": 0.0019232453513793812,
+    "dw_cum": 0.8672111610294939,
+    "per_tensor_dw_cum": [
+     0.9041042178083958,
+     0.9970750292054684,
+     0.7445273120118432,
+     0.8004779412002105,
+     0.7173771972317823,
+     0.8197937641101147,
+     0.8928739150621787,
+     0.8836694204792324,
+     0.8844735844421924
+    ],
+    "frac_update_below_2^-8": 0.8520049452781677,
+    "frac_update_below_2^-9": 0.7348058819770813,
+    "frac_bf16_w_unchanged": 0.7871849536895752
+   },
+   "bf16_cpu_graph": {
+    "dw_cum": 0.8672111610294939,
+    "dev_vs_cpu_graph_w": 0.0
+   }
+  }
+ ],
+ "state_bytes_fp32": 2617344000,
+ "state_bytes_bf16": 1308672000,
+ "grad_bytes_bf16": 436224000,
+ "time_s": {
+  "npu_update_float32": 0.0779,
+  "npu_update_bfloat16": 0.0861,
+  "cpu_fused_adamw": 0.0114,
+  "state_h2d_fp32": 0.0,
+  "state_d2h_fp32": 0.0189,
+  "state_h2d_bf16": 0.0,
+  "state_d2h_bf16": 0.0107,
+  "grad_d2h_bf16": 0.0031,
+  "weight_h2d_bf16": 0.0,
+  "grad_d2h_bf16_tcpu": 0.0
+ },
+ "per_layer_s": {
+  "cpu_path": 0.0145,
+  "npu_stream_fp32": 0.0968,
+  "npu_stream_bf16": 0.0969
+ }
+}
