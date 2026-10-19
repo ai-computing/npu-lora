@@ -1,11 +1,63 @@
-# npu-lora
+<div align="center">
 
-**LoRA and full fine-tuning on inference-only NPUs.**
+<h1>npu-lora</h1>
 
-npu-lora trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
+<h3>LoRA and full fine-tuning on inference-only NPUs</h3>
+
+<p>
+  <strong>English</strong> · <a href="README.ko.md">한국어</a>
+</p>
+
+<p>
+  <a href="https://github.com/ai-computing/ai-rm"><img src="https://img.shields.io/badge/ai--rm-L3%20execute%20%26%20serve-34d399" alt="ai-rm layer: L3 execute and serve"></a>
+  <a href="https://github.com/ai-computing/rm-core/blob/main/PROTOCOL.md"><img src="https://img.shields.io/badge/protocol-v0.1-7c5cff" alt="Protocol v0.1"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-%E2%89%A53.10-3776ab?logo=python&amp;logoColor=white" alt="Python 3.10 or newer"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/PyTorch-%E2%89%A52.4-ee4c2c?logo=pytorch&amp;logoColor=white" alt="PyTorch 2.4 or newer"></a>
+  <img src="https://img.shields.io/badge/hardware-FuriosaAI%20RNGD-f97316" alt="Hardware: FuriosaAI RNGD">
+  <a href="ai-rm.yaml"><img src="https://img.shields.io/badge/maturity-prototype-eab308" alt="Maturity: prototype"></a>
+</p>
+
+<p>
+  <a href="#-highlights"><b>Highlights</b></a> ·
+  <a href="#-results"><b>Results</b></a> ·
+  <a href="#-quick-start"><b>Quick start</b></a> ·
+  <a href="#-ai-rm-integration"><b>ai-rm integration</b></a> ·
+  <a href="#-architecture"><b>How it works</b></a> ·
+  <a href="#-documentation"><b>Docs</b></a>
+</p>
+
+</div>
+
+---
+
+**npu-lora** trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
 inference compiler and runtime. It turns the backward pass into ordinary compiled graphs, keeps the
 optimizer on the host, and produces standard Hugging Face artifacts (PEFT adapters or full models)
 that vLLM and llm-d serve as-is. The same code runs on CUDA and CPU for reference runs.
+
+In [**ai-rm**](https://github.com/ai-computing/ai-rm) it is the L3 training workload: it registers the
+`npu-lora` workload runner (`airm.workloads:npu-lora`), reports training throughput as `airm_tok_s`, and
+ships a Helm chart for training Jobs. Its KPI contribution is heterogeneous resource use: an inference-only
+NPU used as a training resource.
+
+## ✨ Highlights
+
+<table>
+<tr>
+<td width="33%" valign="top">
+<b>Training on an inference compiler</b><br>
+Weights are graph inputs and the backward pass is a traced graph, so the RNGD inference compiler runs training like any forward graph.
+</td>
+<td width="33%" valign="top">
+<b>Same quality as A100</b><br>
+Llama-3.1-8B LoRA trained on RNGD matches the same run on A100 (NSMC 87.5% vs 87.6%, MMLU 63.0% both), and gradients match a CPU reference.
+</td>
+<td width="33%" valign="top">
+<b>Standard outputs, cluster ready</b><br>
+PEFT adapters or full HF models that vLLM <code>--enable-lora</code> and llm-d load directly; Kubernetes Jobs, a Helm chart and Prometheus metrics.
+</td>
+</tr>
+</table>
 
 | | |
 | --- | --- |
@@ -15,7 +67,7 @@ that vLLM and llm-d serve as-is. The same code runs on CUDA and CPU for referenc
 | **Outputs** | PEFT adapter (`adapter_model.safetensors`) · full HF model · merged model |
 | **Integrations** | vLLM runtime LoRA loading · llm-d · Kubernetes Jobs · [lmd-top](https://github.com/ai-computing/lmd-top) `--plan train` · Prometheus metrics |
 
-## Results
+## 📊 Results
 
 Same data, seed and hyper-parameters on RNGD and A100 (Llama-3.1-8B-Instruct, LoRA r=16 on q·v,
 400 steps; evaluation with vLLM on held-out data):
@@ -32,7 +84,12 @@ Same data, seed and hyper-parameters on RNGD and A100 (Llama-3.1-8B-Instruct, Lo
 
 See [docs/validation.md](docs/validation.md) and [`experiments/`](experiments) for the raw numbers.
 
-## Installation
+> [!NOTE]
+> **Prototype.** LoRA quality is validated on Llama-3.1-8B and full fine-tuning on Llama-3.2-1B. Llama-3.1-8B
+> full fine-tuning runs on one card with CPU offload ([step-time measurement](experiments/2026-10-16-full8b-offload-step.md));
+> its quality has not been compared yet. Current state and open questions: [STATUS.md](STATUS.md).
+
+## 🚀 Quick start
 
 ```bash
 git clone https://github.com/ai-computing/npu-lora.git
@@ -52,8 +109,6 @@ Requirements:
 
 - **Evaluation:** `vllm` (only for `npu_lora.bench`).
 
-## Quick start
-
 ```bash
 # 1. Verify that RNGD gradients match the CPU reference (first 2 layers).
 npu-lora check --model meta-llama/Llama-3.1-8B-Instruct --backend furiosa:0 --layers 2
@@ -71,7 +126,9 @@ The first run compiles the training graphs part by part (Llama-8B: ~1.5 h on a 6
 caches them under `~/.cache/npu-lora`; later runs start immediately. `npu-lora compile` fills the
 cache without opening a device, so you can compile on any host and copy the cache.
 
-### Full fine-tuning
+<details>
+<summary><b>Full fine-tuning</b></summary>
+<br>
 
 ```bash
 npu-lora train --full --model unsloth/Llama-3.2-1B-Instruct --data mix.jsonl \
@@ -81,20 +138,26 @@ npu-lora train --full --model unsloth/Llama-3.2-1B-Instruct --data mix.jsonl \
 Decoder-layer weights are trained; embeddings, `lm_head` and the final norm stay frozen. The output
 is a complete Hugging Face model directory. Mix general instruction data into narrow tasks — training
 on a single task collapses general ability on any device (see [docs/validation.md](docs/validation.md)).
+</details>
 
-### On Kubernetes
+<details>
+<summary><b>On Kubernetes</b></summary>
+<br>
 
 ```bash
 npu-lora job --model meta-llama/Llama-3.1-8B-Instruct --data /mnt/store/datasets/train.jsonl \
-    --name my-run --node etri-001 | kubectl apply -f -
+    --name my-run --node <node> | kubectl apply -f -
 ```
 
 The Job uses the official `furiosa-llm` image with the package mounted from a ConfigMap, requests one
 `furiosa.ai/rngd` card, writes the result to the shared model store and exposes Prometheus metrics with
 a ServiceMonitor. [lmd-top](https://github.com/ai-computing/lmd-top) builds the same Job with
 `lmd-top --plan train --vendor furiosa --model … --set data=… [--set full=true]`.
+</details>
 
-## Python API
+<details>
+<summary><b>Python API</b></summary>
+<br>
 
 ```python
 from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
@@ -117,20 +180,11 @@ for batch in data.batches(accum=4, steps=400):
 
 export.save_peft(trainer, "./adapter")      # export.save_full(...) with TrainConfig(full=True)
 ```
+</details>
 
-## How it works
-
-1. **Weights are graph inputs**, so one compiled decoder-layer graph serves every layer.
-2. **Backward is a traced graph** (`make_fx` over `torch.func.vjp`) that the inference compiler runs
-   like any forward graph, after semantics-preserving rewrites for patterns it cannot handle.
-3. **Graphs are compiled in parts of two matmuls**; large fused graphs exhaust the compiler.
-4. **The optimizer runs on the host.** Full fine-tuning overlaps device→host gradient transfer,
-   host AdamW and host→device upload with the backward pass and the next forward pass.
-
-Details: [docs/design.md](docs/design.md). Compiler issues and their workarounds:
-[docs/compiler-workarounds.md](docs/compiler-workarounds.md).
-
-## Commands
+<details>
+<summary><b>Commands and options</b></summary>
+<br>
 
 | Command | Purpose |
 | --- | --- |
@@ -158,8 +212,115 @@ Frequently used training options:
 | `--metrics-port` | — | Serve Prometheus metrics (`airm_tok_s`, `npu_lora_loss`, `npu_lora_step_seconds`, …) |
 
 Training progress is also written as JSON lines to stdout and `--log-file`.
+</details>
 
-## Development
+## 🔌 ai-rm integration
+
+npu-lora is an ai-rm component (layer `l3-serving`, kind `workload`, maturity `prototype`); configuration
+summary in [`ai-rm.yaml`](ai-rm.yaml). It trains Llama-family models with LoRA or full fine-tuning on the
+FuriosaAI RNGD, an inference-only ahead-of-time-compiled NPU, and produces HF PEFT adapters or full HF models.
+
+| Entry-point group | Name | Object |
+| --- | --- | --- |
+| `airm.workloads` | `npu-lora` | `npu_lora.airm:train` |
+
+```python
+from rm_core import Workload, registry
+run = registry.load("airm.workloads", "npu-lora", backend="rngd")    # constructor kwargs = config defaults
+res = run(Workload(kind="train", model="meta-llama/Llama-3.1-8B-Instruct"),
+          data="/mnt/store/datasets/nsmc.jsonl", out="/mnt/store/adapters/nsmc", dataset="nsmc", steps=400)
+res["measurements"]      # [Measurement("tok_s", …, tags={"workload": "train", "dataset": "nsmc", …})]
+```
+
+The runner wraps the existing `npu-lora train`; the training path is the same.
+
+**Install and test:** `python -m pip install -e .`, `python tests/test_cpu.py` (CPU regression tests, no NPU,
+needs PyTorch), `python tests/test_airm.py` (ai-rm runner, CPU), `python -m rm_core.conformance`. Training on
+RNGD needs the Furiosa SDK (`furiosa-torch`).
+
+<details>
+<summary><b>Kubernetes, llm-d and the Helm chart</b></summary>
+<br>
+
+Training runs as a Kubernetes Job. `npu-lora job … | kubectl apply -f -` creates a ConfigMap (the package),
+a Job (one `furiosa.ai/rngd` card, `furiosaai/furiosa-llm` image, privileged), a Service and a ServiceMonitor,
+and writes the result to the shared model-store PVC (`model-store`). The adapters it produces are read as-is
+by vLLM `--enable-lora` and llm-d LoRA routing, and `npu-lora serve` loads them into a running vLLM without a
+restart. lmd-top builds the same Job with `lmd-top --plan train`.
+
+The ai-rm umbrella chart uses the Helm chart [`deploy/helm/npu-lora`](deploy/helm/npu-lora). Depending on
+`train.backend` (`rngd|cuda|cpu`) it selects nodes by the `airm.ai-computing.io/<vendor>.<model>` label
+(rngd: `airm.ai-computing.io/furiosa.RNGD`; otherwise set `nodeAffinity`), and keeps data, checkpoints and
+cache on the model-store PVC (`store.pvc`). If the image does not contain npu-lora, it is installed at start
+with `install.pip`. The metrics port carries the `airm.ai-computing.io/scrape: "true"` annotation.
+
+```bash
+helm template deploy/helm/npu-lora --set train.model=… --set train.data=…
+```
+</details>
+
+<details>
+<summary><b>Workload runner configuration</b></summary>
+<br>
+
+`Workload` accepts only `kind="train"` and `precision="bf16"` (anything else raises `ContractError`).
+
+| Key | Meaning (default) |
+| --- | --- |
+| `data`, `out` | Required. Training JSONL, output directory |
+| `backend` | `rngd` · `rngd:N` · `cuda[:N]` · `cpu` (`rngd`) |
+| `dataset` | Value of the metric tag `dataset` (none) |
+| `rank`, `alpha`, `targets`, `seq_len`, `steps`, `accum`, `lr`, `warmup`, `grad_clip`, `seed`, `full`, `save_every`, `merge_out`, `run_name`, `log_file`, `metrics_port`, `cache_dir`, `tactic`, `max_shapes`, `max_mm` | The `npu-lora train` option of the same name |
+| `kv_transport` | Training has no KV path. Leave it empty (setting it raises `ContractError`) |
+</details>
+
+<details>
+<summary><b>Metrics</b></summary>
+<br>
+
+Using rm-core `METRICS` names: training throughput `tok_s` (Prometheus `airm_tok_s`, tags
+`component=npu-lora`, `workload=train`, `model`, `vendor`, `run_id`; also in the runner's return value).
+Accuracy `accuracy_pct` is in the `measurements` of the `npu_lora.bench` result JSON (tag
+`dataset=nsmc|mmlu`, `run_id` = variant name). Quantities not in rm-core are exported as `npu_lora_*`
+(`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds`, …).
+
+**Deprecated**: the old throughput series `npu_lora_tokens_per_second` (label `run`) is exported with the
+same value as `airm_tok_s` only until protocol 0.2 (PROTOCOL §6 transition rule). Consumers read `airm_tok_s`
+first and fall back to the old name only when it is missing. The common name for step time is the rm-core
+candidate `step_ms`. `power_w` is not exported yet. The device is chosen through the `furiosa.ai/rngd`
+resource and `NPU_LORA_RNGD` / `NPU_LORA_RNGD_FILE`.
+</details>
+
+<details>
+<summary><b>Site configuration (<code>cluster.local.env</code>)</b></summary>
+<br>
+
+The library and the CLI use no site values (`--endpoint` and similar are arguments). Only the demo data
+generator `examples/cluster_facts.py` reads the values below. Copy [`cluster.example.env`](cluster.example.env)
+to `cluster.local.env` and fill it in.
+
+| Variable | Meaning |
+| --- | --- |
+| `MODEL_STORE_NAS_HOST` | Model-store NAS address |
+| `LLMD_GATEWAY_HOST` | llm-d gateway address |
+| `PROMETHEUS_HOST`, `PROMETHEUS_PORT` | Cluster Prometheus address and port |
+</details>
+
+## 🏗 Architecture
+
+1. **Weights are graph inputs**, so one compiled decoder-layer graph serves every layer.
+2. **Backward is a traced graph** (`make_fx` over `torch.func.vjp`) that the inference compiler runs
+   like any forward graph, after semantics-preserving rewrites for patterns it cannot handle.
+3. **Graphs are compiled in parts of two matmuls**; large fused graphs exhaust the compiler.
+4. **The optimizer runs on the host.** Full fine-tuning overlaps device→host gradient transfer,
+   host AdamW and host→device upload with the backward pass and the next forward pass.
+
+Details: [docs/design.md](docs/design.md). Compiler issues and their workarounds:
+[docs/compiler-workarounds.md](docs/compiler-workarounds.md).
+
+<details>
+<summary><b>Development</b></summary>
+<br>
 
 ```bash
 python tests/test_cpu.py        # CPU regression tests (no NPU needed)
@@ -180,8 +341,9 @@ When you bring up a new model or SDK version:
 
 `scripts/vendor-into-lmd-top.sh` copies the package into lmd-top, which embeds it in the Jobs it
 generates.
+</details>
 
-## Limitations
+### Limitations
 
 - Llama architecture only. Other architectures need their layer written as a pure function
   (see `npu_lora/llama.py`).
@@ -190,68 +352,14 @@ generates.
 - furiosa-torch opens devices only from privileged containers.
 - Rebellions ATOM is not supported yet; the same approach applies (`rebel.compile_from_torch`).
 
-## Project status
+## 📚 Documentation
 
-Research code from the ETRI llm-d cluster. Current state and open questions are tracked in
-[STATUS.md](STATUS.md); measurements in [`experiments/`](experiments).
+| Document | Content |
+| --- | --- |
+| [docs/design.md](docs/design.md) | Why training works on an inference-only NPU, vocabulary-chunked loss, CPU-offload pipeline, Job layout |
+| [docs/validation.md](docs/validation.md) | PoC, RNGD vs A100 quality, full fine-tuning results (Korean) |
+| [docs/compiler-workarounds.md](docs/compiler-workarounds.md) | furiosa-torch 2026.2 compiler issues and workarounds (Korean) |
+| [`experiments/`](experiments) | Experiment records and raw data (`experiments/data/`) |
+| [STATUS.md](STATUS.md) | Current state, findings and open questions (Korean) |
 
-## ai-rm
-
-[ai-rm](https://github.com/ai-computing/ai-rm)(AI 반도체 통합 자원관리)의 구성요소다. 설정은 [`ai-rm.yaml`](ai-rm.yaml).
-
-- **계층·역할**: `l3-serving`, kind `workload`. 추론 전용 AOT 컴파일 NPU인 FuriosaAI RNGD에서 Llama 계열
-  모델을 LoRA 또는 전체 파인튜닝하는 학습 워크로드다. 결과는 HF PEFT 어댑터나 HF 전체 모델이다.
-- **k8s + llm-d 연동**: 학습은 쿠버네티스 Job으로 돈다. `npu-lora job … | kubectl apply -f -`가
-  ConfigMap(패키지), Job(`furiosa.ai/rngd` 1장, `furiosaai/furiosa-llm` 이미지, privileged), Service,
-  ServiceMonitor를 만들고 결과를 공유 모델 스토어 PVC(`model-store`)에 쓴다. 산출 어댑터는 vLLM
-  `--enable-lora`와 llm-d LoRA 라우팅이 그대로 읽고, `npu-lora serve`로 실행 중인 vLLM에 재시작 없이 올린다.
-  lmd-top은 `lmd-top --plan train`으로 같은 Job을 만든다.
-  ai-rm umbrella chart는 Helm chart [`deploy/helm/npu-lora`](deploy/helm/npu-lora)를 쓴다. 이 chart는
-  `train.backend`(`rngd|cuda|cpu`)에 따라 노드를 `airm.ai-computing.io/<vendor>.<model>` 레이블로 고르고
-  (rngd: `airm.ai-computing.io/furiosa.RNGD`, 그 외는 `nodeAffinity`로 지정), 데이터·체크포인트·캐시를
-  모델 스토어 PVC(`store.pvc`)에 둔다. 이미지에 npu-lora가 없으면 시작할 때 `install.pip`로 설치한다.
-  지표 포트에는 `airm.ai-computing.io/scrape: "true"` 어노테이션이 붙는다.
-  `helm template deploy/helm/npu-lora --set train.model=… --set train.data=…`
-- **설치·테스트**: `python -m pip install -e .`, `python tests/test_cpu.py`(CPU 회귀 테스트, NPU 불필요,
-  PyTorch 필요), `python tests/test_airm.py`(ai-rm runner, CPU), `python -m rm_core.conformance`.
-  RNGD 학습에는 Furiosa SDK(`furiosa-torch`)가 필요하다.
-- **protocol v0.1 adapter**: `airm.workloads` 이름 `npu-lora`(`npu_lora.airm:train`). 기존 `npu-lora train`을
-  감쌀 뿐 학습 경로는 같다.
-
-  ```python
-  from rm_core import Workload, registry
-  run = registry.load("airm.workloads", "npu-lora", backend="rngd")    # 생성자 kwargs = 설정 기본값
-  res = run(Workload(kind="train", model="meta-llama/Llama-3.1-8B-Instruct"),
-            data="/mnt/store/datasets/nsmc.jsonl", out="/mnt/store/adapters/nsmc", dataset="nsmc", steps=400)
-  res["measurements"]      # [Measurement("tok_s", …, tags={"workload": "train", "dataset": "nsmc", …})]
-  ```
-
-  `Workload`는 `kind="train"`, `precision="bf16"`만 받는다(다르면 `ContractError`). 설정 키:
-
-  | 키 | 뜻 (기본값) |
-  | --- | --- |
-  | `data`, `out` | 필수. 학습 JSONL, 출력 디렉터리 |
-  | `backend` | `rngd`·`rngd:N`·`cuda[:N]`·`cpu` (`rngd`) |
-  | `dataset` | 지표 태그 `dataset` 값 (없음) |
-  | `rank`, `alpha`, `targets`, `seq_len`, `steps`, `accum`, `lr`, `warmup`, `grad_clip`, `seed`, `full`, `save_every`, `merge_out`, `run_name`, `log_file`, `metrics_port`, `cache_dir`, `tactic`, `max_shapes`, `max_mm` | `npu-lora train`의 같은 이름 옵션 |
-  | `kv_transport` | 학습에는 KV 경로가 없다. 비워 둔다(주면 `ContractError`) |
-
-- **지표**(rm-core `METRICS` 이름): 학습 처리량 `tok_s`(Prometheus `airm_tok_s`, 태그 `component=npu-lora`,
-  `workload=train`, `model`, `vendor`, `run_id`; runner 반환값에도 들어 있다). 정확도 `accuracy_pct`는
-  `npu_lora.bench` 결과 JSON의 `measurements`(태그 `dataset=nsmc|mmlu`, `run_id`=변형 이름)에 있다.
-  rm-core에 없는 양은 `npu_lora_*`로 낸다(`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds` 등).
-  **Deprecated**: 예전 처리량 시리즈 `npu_lora_tokens_per_second`(라벨 `run`)는 `airm_tok_s`와 같은 값으로
-  프로토콜 0.2 전까지만 함께 낸다(PROTOCOL §6 이행 규칙). 소비자는 `airm_tok_s`를 먼저 읽고 없을 때만 예전 이름을 쓴다.
-  step 시간의 공통 이름은 rm-core 후보 `step_ms`다. `power_w`는 아직 내지 않는다.
-  장치는 `furiosa.ai/rngd` 리소스와 `NPU_LORA_RNGD`/`NPU_LORA_RNGD_FILE`로 고른다.
-- **KPI**: 이종자원수 — 추론 전용 NPU를 학습 자원으로 쓴다. RNGD 학습 품질이 A100과 같음을
-  [docs/validation.md](docs/validation.md)에서 확인했다.
-- **`cluster.local.env`**: 라이브러리와 CLI는 사이트 값을 쓰지 않는다(`--endpoint` 등은 인자로 받는다).
-  데모 데이터 생성기 `examples/cluster_facts.py`만 아래 값을 읽는다. `cluster.example.env`를
-  `cluster.local.env`로 복사해 채운다.
-
-  | 변수 | 뜻 |
-  | --- | --- |
-  | `MODEL_STORE_NAS_HOST` | 모델 스토어 NAS 주소 |
-  | `LLMD_GATEWAY_HOST` | llm-d 게이트웨이 주소 |
-  | `PROMETHEUS_HOST`, `PROMETHEUS_PORT` | 클러스터 Prometheus 주소와 포트 |
+Research code from the ETRI llm-d cluster.
