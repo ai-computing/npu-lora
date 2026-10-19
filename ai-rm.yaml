@@ -1,4 +1,4 @@
-name: npu-lora
+name: npu-train
 protocol: "0.1"
 layer: l3-serving
 kind: workload
