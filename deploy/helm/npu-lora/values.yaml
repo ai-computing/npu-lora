@@ -1,0 +1,43 @@
+# npu-lora 학습 Job. 사이트 값(주소·자격 증명)은 넣지 않는다 — ai-rm deploy/clusters/<name>/ override 로 들어온다.
+enabled: true
+# 공식 furiosa-llm 이미지에는 torch·furiosa-torch·transformers 가 있다. npu-lora 가 들어 있지 않은 이미지면
+# install.pip 로 시작할 때 설치한다(이미지에 이미 있으면 install.pip: "").
+image: {repository: furiosaai/furiosa-llm, tag: latest}
+imagePullPolicy: IfNotPresent
+install:
+  pip: "npu-lora @ git+https://github.com/ai-computing/npu-lora@main"
+airm:
+  kvTransport: ""          # 학습에는 KV 경로가 없다 — 비워 둔다
+  placement: ""
+  metricsPort: 9400        # airm_tok_s 와 npu_lora_* 지표 (/metrics)
+  # backend → 노드 선택 레이블(airm.ai-computing.io/<vendor>.<model> 존재). nodeAffinity 를 주면 그것을 쓴다.
+  nodeLabels:
+    rngd: airm.ai-computing.io/furiosa.RNGD
+    cuda: ""
+    cpu: ""
+nodeAffinity: {}
+resources: {}              # 비우면 backend 기본값(rngd: furiosa.ai/rngd 1, cuda: nvidia.com/gpu 1; cpu 8, mem 64Gi)
+
+# 학습 설정 — `npu-lora train` 옵션과 같다 (README 「ai-rm」).
+train:
+  name: demo                               # 실행 이름: Job 이름·출력 디렉터리
+  model: meta-llama/Llama-3.1-8B-Instruct
+  data: /mnt/store/datasets/train.jsonl    # 모델 스토어 PVC 안 경로
+  out: ""                                  # 비우면 /mnt/store/adapters/<model>/<name>
+  backend: rngd                            # rngd | cuda | cpu
+  full: false
+  steps: 100
+  seqLen: 512
+  rank: 16
+  alpha: 32
+  targets: "q,v"
+  lr: 0.0002
+  accum: 1
+  extraArgs: []
+
+# 데이터·체크포인트·HF 캐시·컴파일 캐시는 공유 모델 스토어 PVC 아래에 둔다.
+store:
+  pvc: model-store
+  mountPath: /mnt/store
+  hfHome: /mnt/store/hub
+  cacheSubPath: npu-lora-cache

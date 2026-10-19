@@ -1,0 +1,156 @@
+{{- if .Values.enabled }}
+{{- $t := .Values.train }}
+{{- $backend := $t.backend }}
+{{- if not (has $backend (list "rngd" "cuda" "cpu")) }}
+{{- fail (printf "train.backend must be rngd, cuda or cpu (got %q)" $backend) }}
+{{- end }}
+{{- if .Values.airm.kvTransport }}
+{{- fail "npu-lora training has no KV transport; leave airm.kvTransport empty" }}
+{{- end }}
+{{- $out := include "npu-lora.out" . }}
+{{- $label := get .Values.airm.nodeLabels $backend }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "npu-lora.name" . }}
+  labels:
+    {{- include "npu-lora.labels" . | nindent 4 }}
+  annotations:
+    npu-lora/model: {{ $t.model | quote }}
+    npu-lora/data: {{ $t.data | quote }}
+    npu-lora/out: {{ $out | quote }}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "npu-lora.labels" . | nindent 8 }}
+      annotations:
+        airm.ai-computing.io/scrape: "true"
+        prometheus.io/port: {{ .Values.airm.metricsPort | quote }}
+        prometheus.io/path: /metrics
+    spec:
+      restartPolicy: Never
+      {{- if .Values.nodeAffinity }}
+      affinity:
+        nodeAffinity:
+          {{- toYaml .Values.nodeAffinity | nindent 10 }}
+      {{- else if $label }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: {{ $label | quote }}, operator: Exists}
+      {{- end }}
+      {{- if eq $backend "rngd" }}
+      # furiosa-torch 는 privileged 에서만 장치를 연다. privileged 컨테이너는 노드의 RNGD 를 전부 보므로
+      # privileged 가 아닌 init 컨테이너가 device plugin 이 배정한 카드를 적고, 학습은 그 카드만 쓴다.
+      initContainers:
+        - name: assigned-rngd
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "ls /dev/rngd | grep -oE '^npu[0-9]+' | sort -u | head -1 > /run/npu-lora/rngd && echo assigned $(cat /run/npu-lora/rngd)"]
+          resources:
+            limits: {furiosa.ai/rngd: 1}
+          volumeMounts:
+            - {name: rngd, mountPath: /run/npu-lora}
+      {{- end }}
+      containers:
+        - name: train
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              set -e
+              {{- if eq $backend "rngd" }}
+              # 공식 furiosa-llm 이미지에는 컴파일러가 부르는 aarch64 크로스 툴체인이 없다.
+              command -v aarch64-linux-gnu-gcc >/dev/null || (apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross libc6-dev)
+              {{- end }}
+              {{- if .Values.install.pip }}
+              python3 -m pip install -q --no-deps {{ .Values.install.pip | quote }}
+              {{- end }}
+              mkdir -p "$OUT"
+              exec "$@"
+            - --
+            - python3
+            - -m
+            - npu_lora.cli
+            - train
+            - --model
+            - {{ $t.model | quote }}
+            - --data
+            - {{ $t.data | quote }}
+            - --out
+            - {{ $out | quote }}
+            - --backend
+            - {{ if eq $backend "rngd" }}furiosa:auto{{ else if eq $backend "cuda" }}cuda:0{{ else }}cpu{{ end }}
+            - --steps
+            - {{ $t.steps | quote }}
+            - --seq-len
+            - {{ $t.seqLen | quote }}
+            - --rank
+            - {{ $t.rank | quote }}
+            - --alpha
+            - {{ $t.alpha | quote }}
+            - --targets
+            - {{ $t.targets | quote }}
+            - --lr
+            - {{ $t.lr | quote }}
+            - --accum
+            - {{ $t.accum | quote }}
+            - --run-name
+            - {{ $t.name | quote }}
+            - --metrics-port
+            - {{ .Values.airm.metricsPort | quote }}
+            - --log-file
+            - {{ printf "%s/train.jsonl" $out | quote }}
+            - --cache-dir
+            - /cache/furiosa
+            {{- if $t.full }}
+            - --full
+            {{- end }}
+            {{- range $t.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - {name: OUT, value: {{ $out | quote }}}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - {name: HF_HUB_OFFLINE, value: "1"}
+            - {name: HF_HOME, value: {{ .Values.store.hfHome | quote }}}
+            {{- if eq $backend "rngd" }}
+            - {name: NPU_LORA_RNGD_FILE, value: /run/npu-lora/rngd}
+            {{- end }}
+          ports:
+            - {name: metrics, containerPort: {{ .Values.airm.metricsPort }}}
+          {{- if eq $backend "rngd" }}
+          securityContext:
+            privileged: true
+          {{- end }}
+          resources:
+            {{- if .Values.resources }}
+            {{- toYaml .Values.resources | nindent 12 }}
+            {{- else }}
+            requests: {cpu: "8", memory: 64Gi}
+            {{- if eq $backend "rngd" }}
+            limits: {furiosa.ai/rngd: 1}
+            {{- else if eq $backend "cuda" }}
+            limits: {nvidia.com/gpu: 1}
+            {{- end }}
+            {{- end }}
+          volumeMounts:
+            - {name: store, mountPath: {{ .Values.store.mountPath | quote }}}
+            - {name: store, mountPath: /cache, subPath: {{ .Values.store.cacheSubPath | quote }}}
+            {{- if eq $backend "rngd" }}
+            - {name: rngd, mountPath: /run/npu-lora}
+            {{- end }}
+      volumes:
+        - name: store
+          persistentVolumeClaim: {claimName: {{ .Values.store.pvc | quote }}}
+        {{- if eq $backend "rngd" }}
+        - {name: rngd, emptyDir: {}}
+        {{- end }}
+{{- end }}
