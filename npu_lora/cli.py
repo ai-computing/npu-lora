@@ -14,7 +14,7 @@ import time
 
 def _common(p):
     p.add_argument("--model", required=True, help="HF 이름(로컬 캐시) 또는 경로")
-    p.add_argument("--backend", default="furiosa:0", help="furiosa:N | cuda:N | cpu")
+    p.add_argument("--backend", default="furiosa:0", help="furiosa:N | rbln:N | cuda:N | cpu")
     p.add_argument("--seq-len", type=int, default=512)
     p.add_argument("--rank", type=int, default=16)
     p.add_argument("--alpha", type=float, default=32.0)
