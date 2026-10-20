@@ -15,17 +15,43 @@ BF = torch.bfloat16
 
 # 레이어 그래프에 넘기는 고정 가중치의 순서. HF 키 이름은 load_layer 가 맞춘다.
 LAYER_WEIGHTS = ("ln1", "ln2", "wq", "wk", "wv", "wo", "wg", "wu", "wd")
-HF_NAMES = {"ln1": "input_layernorm", "ln2": "post_attention_layernorm",
+#: optional per-layer tensors of other families: q/k/v biases (Qwen2), per-head q/k RMSNorm weights (Qwen3)
+OPTIONAL_WEIGHTS = ("bq", "bk", "bv", "qn", "kn", "ln3", "ln4")
+#: Gemma norms are x_norm * (1 + w): loaded as (1 + w) so the shared rms() applies
+_NORMS = ("ln1", "ln2", "ln3", "ln4", "qn", "kn")
+HF_NAMES = {"bq": "self_attn.q_proj.@bias", "bk": "self_attn.k_proj.@bias", "bv": "self_attn.v_proj.@bias",
+            "qn": "self_attn.q_norm", "kn": "self_attn.k_norm",
+            "ln3": "pre_feedforward_layernorm", "ln4": "post_feedforward_layernorm",
+            "ln1": "input_layernorm", "ln2": "post_attention_layernorm",
             "wq": "self_attn.q_proj", "wk": "self_attn.k_proj", "wv": "self_attn.v_proj",
             "wo": "self_attn.o_proj", "wg": "mlp.gate_proj", "wu": "mlp.up_proj", "wd": "mlp.down_proj"}
 
 # LoRA 를 붙일 수 있는 투영과 (입력 차원, 출력 차원) 을 정하는 함수
 LORA_TARGETS = {
-    "q": lambda c: (c.H, c.H),
+    "q": lambda c: (c.H, c.q_dim),
     "k": lambda c: (c.H, c.kv_dim),
     "v": lambda c: (c.H, c.kv_dim),
-    "o": lambda c: (c.H, c.H),
+    "o": lambda c: (c.q_dim, c.H),
 }
+
+
+def hf_name(k):
+    """HF tensor name of layer weight k (".weight" unless the name says otherwise)."""
+    n = HF_NAMES[k]
+    return n.replace(".@", ".") if ".@" in n else n + ".weight"
+
+
+#: the attention half of a layer, for MoE configs (their MLP runs on the host: see `trainer.HostMLP`)
+ATTN_WEIGHTS = ("ln1", "wq", "wk", "wv", "wo")
+#: model_type -> attention block family of MoE checkpoints whose MLP half runs on the host
+MOE_FAMILIES = {"qwen3_moe": "qwen3", "qwen2_moe": "qwen2", "mixtral": "mistral"}
+
+
+def layer_weights(c):
+    """the per-layer tensors this config's layers take, in graph-input order"""
+    extra = (("bq", "bk", "bv") if c.qkv_bias else ()) + (("qn", "kn") if c.qk_norm else ()) \
+        + (("ln3", "ln4") if c.gemma else ())
+    return (ATTN_WEIGHTS if c.moe else LAYER_WEIGHTS) + extra
 
 
 @dataclass(frozen=True)
@@ -40,19 +66,57 @@ class LlamaConfig:
     eps: float = 1e-5
     # llama3 rope_scaling: (factor, low_freq_factor, high_freq_factor, original_max_position) 또는 None
     rope_scaling: tuple = None
+    family: str = "llama"          # llama | mistral | qwen2 | qwen3 (same block, the flags below differ)
+    head_dim: int = 0              # 0: H // nh (Qwen3 sets it explicitly: nh * head_dim may differ from H)
+    qkv_bias: bool = False         # Qwen2
+    qk_norm: bool = False          # Qwen3 / Gemma 3: per-head RMSNorm on q and k before RoPE
+    gemma: bool = False            # Gemma 3: (1+w) norms, sandwich norms around attention and MLP, GELU-tanh,
+    attn_scale: float = 0.0        #   query_pre_attn_scalar ** -0.5 (0: 1/sqrt(hd)), sqrt(H)-scaled input embeddings,
+    layer_types: tuple = ()        #   sliding layers with their own RoPE base (rope_local_theta)
+    rope_local_theta: float = 10000.0
+    rope_linear: float = 1.0       # linear RoPE scaling factor of the full-attention layers (Gemma 3 4B+)
+    window: int = 0                # sliding window (the sequence length must fit in it)
+    moe: bool = False              # MoE checkpoint: the compiled layer is attention + residual only; the
+                                   #   post-attention norm and the MoE block run on the host (frozen)
 
     @property
     def hd(self):
-        return self.H // self.nh
+        return self.head_dim or self.H // self.nh
+
+    @property
+    def q_dim(self):
+        return self.nh * self.hd
 
     @property
     def kv_dim(self):
         return self.nkv * self.hd
 
+    @property
+    def key(self):
+        """compiled-graph cache key part for the block variant (empty for plain Llama: old caches stay valid)"""
+        if self.family == "llama" and not (self.head_dim or self.qkv_bias or self.qk_norm or self.moe):
+            return ""
+        return f"-{self.family}-hd{self.hd}-b{int(self.qkv_bias)}-n{int(self.qk_norm)}" + ("-attn" if self.moe else "")
+
+    @classmethod
+    def _gemma3(cls, c):
+        return _gemma3_from(cls, c)
+
     @classmethod
     def from_hf(cls, path):
         c = json.load(open(os.path.join(path, "config.json")))
-        rs = c.get("rope_scaling") or {}
+        family = c.get("model_type", "llama")
+        if family == "gemma3_text":
+            return cls._gemma3(c)
+        moe = family in MOE_FAMILIES
+        if moe:
+            family = MOE_FAMILIES[family]
+        if family not in ("llama", "mistral", "qwen2", "qwen3"):
+            raise NotImplementedError(f"model_type {family!r}: npu-lora implements llama, mistral, qwen2, qwen3, "
+                                      f"gemma3_text and the MoE checkpoints {sorted(MOE_FAMILIES)}")
+        if c.get("use_sliding_window") or (family == "mistral" and c.get("sliding_window")):
+            raise NotImplementedError("sliding-window attention is not implemented")
+        rs = c.get("rope_scaling") or c.get("rope_parameters") or {}
         kind = rs.get("rope_type", rs.get("type"))
         if kind not in (None, "default", "llama3"):
             raise NotImplementedError(f"rope_scaling {kind!r} is not supported yet")
@@ -61,8 +125,38 @@ class LlamaConfig:
         return cls(H=c["hidden_size"], I=c["intermediate_size"], nh=c["num_attention_heads"],
                    nkv=c.get("num_key_value_heads", c["num_attention_heads"]),
                    n_layers=c["num_hidden_layers"], vocab=c["vocab_size"],
-                   rope_theta=float(c.get("rope_theta", 10000.0)), eps=float(c.get("rms_norm_eps", 1e-5)),
-                   rope_scaling=scaling)
+                   rope_theta=float(c.get("rope_theta", rs.get("rope_theta", 10000.0))),
+                   eps=float(c.get("rms_norm_eps", 1e-5)), rope_scaling=scaling, family=family,
+                   head_dim=int(c.get("head_dim") or 0) if family == "qwen3" else 0,
+                   qkv_bias=family == "qwen2" or bool(c.get("attention_bias", False)), qk_norm=family == "qwen3",
+                   moe=moe)
+
+
+def _gemma3_from(cls, c):
+    if c.get("final_logit_softcapping") or c.get("attn_logit_softcapping"):
+        raise NotImplementedError("logit soft-capping is not implemented")
+    if c.get("hidden_activation", "gelu_pytorch_tanh") != "gelu_pytorch_tanh":
+        raise NotImplementedError(f"activation {c.get('hidden_activation')}")
+    n = c["num_hidden_layers"]
+    kinds = c.get("layer_types") or ["full_attention" if (i + 1) % c.get("sliding_window_pattern", 6) == 0
+                                     else "sliding_attention" for i in range(n)]
+    rp = c.get("rope_parameters") or {}
+    full = rp.get("full_attention", rp) if isinstance(rp, dict) else {}
+    local = rp.get("sliding_attention", {}) if isinstance(rp, dict) else {}
+    rs = c.get("rope_scaling") or full
+    lin = float(rs.get("factor", 1.0)) if rs.get("rope_type", rs.get("type")) == "linear" else 1.0
+    hd = c.get("head_dim") or c["hidden_size"] // c["num_attention_heads"]
+    return cls(H=c["hidden_size"], I=c["intermediate_size"], nh=c["num_attention_heads"],
+               nkv=c.get("num_key_value_heads", c["num_attention_heads"]), n_layers=n, vocab=c["vocab_size"],
+               rope_theta=float(c.get("rope_theta", full.get("rope_theta", 1e6))),
+               eps=float(c.get("rms_norm_eps", 1e-6)), family="gemma3_text", head_dim=int(hd), qk_norm=True,
+               gemma=True, attn_scale=float(c.get("query_pre_attn_scalar", hd)) ** -0.5, layer_types=tuple(kinds),
+               rope_local_theta=float(c.get("rope_local_base_freq", local.get("rope_theta", 10000.0))),
+               rope_linear=lin, window=int(c.get("sliding_window") or 0))
+
+
+def gelu_tanh(x):
+    return F.gelu(x, approximate="tanh")
 
 
 def rms(x, g, eps):
@@ -115,14 +209,29 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     # RoPE 는 전치하기 전 [S, heads, hd] 배치에서 건다. 전치한 q 에 걸면 원소별 연산의 두 피연산자
     # 배치가 달라져([nkv,rep,S,hd] vs [S,nkv,rep,hd]) furiosa 가 "verification of operator failed" 로 멈춘다.
     cs, sn = cos.unsqueeze(1), sin.unsqueeze(1)                          # [S, 1, hd]
-    q = rope_mm(proj(x, w["wq"], lora.get("q"), scale).view(S, c.nh, c.hd), cs, sn, rot).transpose(0, 1)
-    k = rope_mm(proj(x, w["wk"], lora.get("k"), scale).view(S, c.nkv, c.hd), cs, sn, rot).transpose(0, 1)
-    v = proj(x, w["wv"], lora.get("v"), scale).view(S, c.nkv, c.hd).transpose(0, 1)
+    q, k, v = proj(x, w["wq"], lora.get("q"), scale), proj(x, w["wk"], lora.get("k"), scale), \
+        proj(x, w["wv"], lora.get("v"), scale)
+    if c.qkv_bias:
+        q, k, v = q + w["bq"], k + w["bk"], v + w["bv"]
+    q, k = q.view(S, c.nh, c.hd), k.view(S, c.nkv, c.hd)
+    if c.qk_norm:                                                        # per head, over hd
+        q, k = rms(q, w["qn"], c.eps), rms(k, w["kn"], c.eps)
+    q = rope_mm(q, cs, sn, rot).transpose(0, 1)
+    k = rope_mm(k, cs, sn, rot).transpose(0, 1)
+    v = v.view(S, c.nkv, c.hd).transpose(0, 1)
     qg = q.reshape(c.nkv, rep * S, c.hd)                                 # [nkv, rep*S, hd]
-    att = (qg @ k.transpose(-1, -2)).float().view(c.nkv, rep, S, S) / math.sqrt(c.hd) + mask
+    att_scale = c.attn_scale or 1.0 / math.sqrt(c.hd)          # (`scale` is the LoRA scale)
+    att = (qg @ k.transpose(-1, -2)).float().view(c.nkv, rep, S, S) * att_scale + mask
     att = torch.softmax(att, -1).to(h.dtype).view(c.nkv, rep * S, S)
     o = (att @ v).view(c.nh, S, c.hd)                                   # [nh, S, hd]
-    o = proj(o.transpose(0, 1).reshape(S, c.H), w["wo"], lora.get("o"), scale)
+    o = proj(o.transpose(0, 1).reshape(S, c.q_dim), w["wo"], lora.get("o"), scale)
+    if c.moe:                                    # the MLP half runs on the host (trainer.HostMLP)
+        return h + o
+    if c.gemma:                                  # sandwich norms: post-attention, pre/post feed-forward
+        h = h + rms(o, w["ln2"], c.eps)
+        x = rms(h, w["ln3"], c.eps)
+        m = (gelu_tanh(x @ w["wg"].t()) * (x @ w["wu"].t())) @ w["wd"].t()
+        return h + rms(m, w["ln4"], c.eps)
     h = h + o
     x = rms(h, w["ln2"], c.eps)
     return h + (F.silu(x @ w["wg"].t()) * (x @ w["wu"].t())) @ w["wd"].t()
@@ -208,9 +317,15 @@ def rope_inv_freq(c):
     return torch.where(medium, smoothed, out)
 
 
-def rope_tables(c, S, dtype=BF):
+def rope_tables(c, S, dtype=BF, kind="full_attention"):
     pos = torch.arange(S, dtype=torch.float32)
-    inv = rope_inv_freq(c)
+    if c.gemma:
+        theta = c.rope_local_theta if kind == "sliding_attention" else c.rope_theta
+        inv = 1.0 / (theta ** (torch.arange(0, c.hd, 2, dtype=torch.float32) / c.hd))
+        if kind != "sliding_attention":
+            inv = inv / c.rope_linear
+    else:
+        inv = rope_inv_freq(c)
     ang = torch.outer(pos, inv)
     ang = torch.cat((ang, ang), -1)
     return ang.cos().to(dtype), ang.sin().to(dtype)
@@ -250,13 +365,22 @@ class Weights:
             self._open[fn] = safe_open(os.path.join(self.path, fn), "pt")
         return self._open[fn].get_tensor(name).to(dtype)
 
-    def layer(self, i):
-        return {k: self.get(f"model.layers.{i}.{HF_NAMES[k]}.weight") for k in LAYER_WEIGHTS}
+    def layer(self, i, c=None):
+        keys = layer_weights(c) if c is not None else LAYER_WEIGHTS
+        out = {}
+        for k in keys:
+            if c is not None and c.gemma and k in _NORMS:
+                out[k] = (1.0 + self.get(f"model.layers.{i}.{hf_name(k)}", torch.float32)).to(BF)
+            else:
+                out[k] = self.get(f"model.layers.{i}.{hf_name(k)}")
+        return out
 
     def embed(self):
         return self.get("model.embed_tokens.weight")
 
-    def norm(self):
+    def norm(self, c=None):
+        if c is not None and c.gemma:
+            return (1.0 + self.get("model.norm.weight", torch.float32)).to(BF)
         return self.get("model.norm.weight")
 
     def lm_head(self):

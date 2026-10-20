@@ -372,8 +372,8 @@ class GraphModule(torch.nn.Module):
 def _split(c, targets, args):
     """평평한 인자 → (h, weights dict, lora dict, (cos, sin, mask, rot), rest)"""
     h = args[0]
-    nw = len(L.LAYER_WEIGHTS)
-    w = dict(zip(L.LAYER_WEIGHTS, args[1:1 + nw]))
+    nw = len(L.layer_weights(c))
+    w = dict(zip(L.layer_weights(c), args[1:1 + nw]))
     ad = args[1 + nw:1 + nw + 2 * len(targets)]
     lora = {t: (ad[2 * i], ad[2 * i + 1]) for i, t in enumerate(targets)}
     tabs = args[1 + nw + 2 * len(targets):5 + nw + 2 * len(targets)]
@@ -394,15 +394,15 @@ def layer_bwd_full_fn(c):
 
     LoRA 없이 레이어 가중치 9종(LAYER_WEIGHTS 순서) 전부의 기울기를 낸다. 순전파를 다시 계산한다.
     """
-    nw = len(L.LAYER_WEIGHTS)
+    nw = len(L.layer_weights(c))
 
     def bwd(*args):
         h, w, _, tabs, rest = _split(c, (), args)
         g_out = rest[0]
 
         def f(h_, *ws):
-            return L.layer(c, h_, dict(zip(L.LAYER_WEIGHTS, ws)), {}, 1.0, *tabs)
-        _, pull = torch.func.vjp(f, h, *[w[k] for k in L.LAYER_WEIGHTS])
+            return L.layer(c, h_, dict(zip(L.layer_weights(c), ws)), {}, 1.0, *tabs)
+        _, pull = torch.func.vjp(f, h, *[w[k] for k in L.layer_weights(c)])
         grads = pull(g_out)
         assert len(grads) == 1 + nw
         return tuple(grads)
@@ -415,7 +415,7 @@ def layer_bwd_full_acc_fn(c):
     micro-batch 사이 기울기를 장치에서 더해 step 마다 한 번만 host 로 내린다. RNGD→host 가 3.1 GB/s 라
     (8B 기울기 16 GB = 5 s) 내리는 횟수가 학습 속도를 정한다.
     """
-    nw = len(L.LAYER_WEIGHTS)
+    nw = len(L.layer_weights(c))
     full = layer_bwd_full_fn(c)
 
     def bwd(*args):

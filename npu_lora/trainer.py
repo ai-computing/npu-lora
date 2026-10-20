@@ -62,6 +62,9 @@ class LoRATrainer:
         self.step_no = 0
         # 그래프 조각 크기(행렬곱 수). furiosa 는 큰 융합 그래프를 컴파일하지 못해 기본 2, 나머지는 통째로.
         self.max_mm = max_mm if max_mm is not None else (2 if backend.name == "furiosa" else 0)
+        if self.c.moe and train.full:
+            raise NotImplementedError("full fine-tuning of MoE checkpoints (experts stay frozen on the host): use LoRA")
+        self.host_mlp = None          # MoE: post-attention norm + MoE block on the host (moe.HostMLP)
         torch.manual_seed(train.seed)
 
     # ------------------------------------------------------------------ 준비
@@ -69,15 +72,28 @@ class LoRATrainer:
         c, S, be = self.c, self.tc.seq_len, self.be
         t0 = time.time()
         self.embed = self.W.embed()                                   # host 에 둔다(gather 만 한다)
-        self.dev_norm = be.to_device(self.W.norm())
+        if c.gemma:                                                   # Gemma: sqrt(H)-scaled input embeddings
+            if c.window and S > c.window:
+                raise ValueError(f"seq_len {S} exceeds the sliding window {c.window}")
+            self.embed = self.embed * torch.tensor(c.H ** 0.5, dtype=self.embed.dtype)
+        self.dev_norm = be.to_device(self.W.norm(c))
         self._setup_vocab_chunks()
         cos, sin = L.rope_tables(c, S)
         self.dev_cos, self.dev_sin = be.to_device(cos), be.to_device(sin)
+        self._tabs = {}                                   # per layer type (Gemma: sliding layers' own RoPE base)
+        for kind in set(c.layer_types):
+            lc, ls = L.rope_tables(c, S, kind=kind)
+            self._tabs[kind] = (be.to_device(lc), be.to_device(ls))
         self.dev_rot = be.to_device(L.rotate_half_matrix(c.hd))
+        if c.moe:
+            from .moe import HostMLP
+            self.host_mlp = HostMLP(self.path)
+            self.log(json.dumps({"event": "host_mlp", "layers": len(self.host_mlp.blocks),
+                                 "seconds": round(time.time() - t0, 1)}))
         self.dev_W = []
         for i in range(c.n_layers):
-            w = self.W.layer(i)
-            self.dev_W.append([be.to_device(w[k]) for k in L.LAYER_WEIGHTS])
+            w = self.W.layer(i, c)
+            self.dev_W.append([be.to_device(w[k]) for k in L.layer_weights(c)])
         self.log(json.dumps({"event": "weights_on_device", "layers": c.n_layers,
                              "seconds": round(time.time() - t0, 1)}))
         self._init_adapters()
@@ -106,8 +122,8 @@ class LoRATrainer:
         """
         c, r = self.c, self.lora.r
         if self.tc.full:
-            self.master = [[self.W.get(f"model.layers.{i}.{L.HF_NAMES[k]}.weight", torch.float32)
-                            for k in L.LAYER_WEIGHTS] for i in range(c.n_layers)]
+            self.master = [[self.W.get(f"model.layers.{i}.{L.hf_name(k)}", torch.float32)
+                            for k in L.layer_weights(c)] for i in range(c.n_layers)]
         else:
             # 전역 난수에 기대지 않는다: furiosa 를 불러오면 torch.manual_seed 가 장치 쪽에서 경고만 내고
             # 끝나, 같은 seed 로 만든 두 trainer 의 A 가 달라졌다(check 가 엉뚱한 차이를 보고).
@@ -155,7 +171,7 @@ class LoRATrainer:
     def _samples(self):
         c, S, r = self.c, self.tc.seq_len, self.lora.r
         h = torch.zeros(S, c.H, dtype=BF)
-        w = [torch.zeros_like(x) for x in self.W.layer(0).values()]
+        w = [torch.zeros_like(x) for x in self.W.layer(0, c).values()]
         ad = []
         for t in (() if self.tc.full else self.lora.targets):
             d_in, d_out = L.LORA_TARGETS[t](c)
@@ -167,8 +183,8 @@ class LoRATrainer:
     def _compile(self):
         c, S, lc = self.c, self.tc.seq_len, self.lora
         h, w, ad, cos, sin, mask, rot = self._samples()
-        key = (f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}-S{S}-full" if self.tc.full else
-               f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}-S{S}-r{lc.r}-{''.join(lc.targets)}-s{lc.scale}")
+        key = (f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}{c.key}-S{S}-full" if self.tc.full else
+               f"llama-v2-H{c.H}-I{c.I}-nh{c.nh}-kv{c.nkv}{c.key}-S{S}-r{lc.r}-{''.join(lc.targets)}-s{lc.scale}")
         targets, scale = ((), 1.0) if self.tc.full else (lc.targets, lc.scale)
         lay_in = [h, *w, *ad, cos, sin, mask, rot]
         t0 = time.time()
@@ -191,7 +207,7 @@ class LoRATrainer:
             acc_in = bwd_in + [torch.zeros_like(x) + 0.01 for x in w]
             self.g_bwd_acc = cp(f"{key}-bwd-acc", G.build(G.layer_bwd_full_acc_fn(c), acc_in), acc_in)
         # head: rms → 어휘 조각별 통계/기울기 → rms 역전파 (조각 그래프는 모든 조각이 같은 모양)
-        norm, vc = self.W.norm(), self.vc
+        norm, vc = self.W.norm(self.c), self.vc
         x = torch.zeros(S, c.H, dtype=BF) + 0.01
         lm_j = torch.zeros(vc, c.H, dtype=BF) + 0.01
         bias_j, iota_j = torch.zeros(1, vc), torch.arange(vc, dtype=torch.float32).view(1, -1)
@@ -207,20 +223,32 @@ class LoRATrainer:
         self.log(json.dumps({"event": "compiled", "seconds": round(time.time() - t0, 1), **self.be.describe()}))
 
     # ------------------------------------------------------------------ 한 step
+    def _cs(self, i):
+        """(cos, sin) device tables for layer i"""
+        kinds = self.c.layer_types
+        return self._tabs[kinds[i]] if kinds else (self.dev_cos, self.dev_sin)
+
     def forward_backward(self, ids, labels, doc_ids=None):
         """ids, labels: [S] (labels 는 다음 토큰 id, 학습 제외 위치는 -1). 반환: (loss, grads)"""
         be, c = self.be, self.c
         n_tok = int((labels >= 0).sum())
         mask = be.to_device(L.causal_mask(len(ids), doc_ids))
         h = be.to_device(self.embed[ids])
-        hs = [h]
+        hs, mids = [h], []
+        mlp = self.host_mlp
         for i in range(c.n_layers):
-            h = self.g_fwd(h, *self.dev_W[i], *self.dev_AD[i], self.dev_cos, self.dev_sin, mask, self.dev_rot)
+            h = self.g_fwd(h, *self.dev_W[i], *self.dev_AD[i], *self._cs(i), mask, self.dev_rot)
+            if mlp is not None:                       # MoE: attention on the device, MLP half on the host
+                a = be.to_host(h).to(BF)
+                mids.append(a)
+                h = be.to_device(mlp.forward(i, a))
             hs.append(h)
         loss, g = self._head(hs[-1], labels, n_tok)
         grads = [None] * c.n_layers
         for i in reversed(range(c.n_layers)):
-            out = self.g_bwd(hs[i], *self.dev_W[i], *self.dev_AD[i], self.dev_cos, self.dev_sin, mask,
+            if mlp is not None:
+                g = be.to_device(mlp.backward(i, mids[i], be.to_host(g)).to(BF))
+            out = self.g_bwd(hs[i], *self.dev_W[i], *self.dev_AD[i], *self._cs(i), mask,
                              self.dev_rot, g)
             g, grads[i] = out[0], out[1:]
         be.sync()
@@ -345,11 +373,11 @@ class LoRATrainer:
                 tw = time.time()
                 w = self._layer_w(i)
                 t_wait += time.time() - tw
-                h = self.g_fwd(h, *w, self.dev_cos, self.dev_sin, mask, self.dev_rot)
+                h = self.g_fwd(h, *w, *self._cs(i), mask, self.dev_rot)
                 hs.append(h)
             loss, g = self._head(hs[-1], labels, n_tok)
             for i in reversed(range(c.n_layers)):
-                tabs = (self.dev_cos, self.dev_sin, mask, self.dev_rot)
+                tabs = (*self._cs(i), mask, self.dev_rot)
                 if acc[i] is None:
                     out = self.g_bwd(hs[i], *self.dev_W[i], *tabs, g)
                 else:
@@ -396,7 +424,7 @@ class LoRATrainer:
         """{(layer, LAYER_WEIGHTS 키): fp32 가중치} — 전체 파인튜닝 모드에서만."""
         assert self.tc.full
         self.sync_params()
-        return {(i, k): p.detach() for i, per in enumerate(self.master) for k, p in zip(L.LAYER_WEIGHTS, per)}
+        return {(i, k): p.detach() for i, per in enumerate(self.master) for k, p in zip(L.layer_weights(self.c), per)}
 
     def summary(self):
         return {"model": self.path, "config": asdict(self.c), "lora": {**asdict(self.lora), "scale": self.lora.scale},
