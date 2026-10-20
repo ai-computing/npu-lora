@@ -94,6 +94,8 @@ def save_full(trainer, out_dir, extra=None):
     W = L.Weights(base)
     new = {f"model.layers.{i}.{L.hf_name(k)}": w for (i, k), w in trainer.layer_weights().items()}
     os.makedirs(out_dir, exist_ok=True)
+    if trainer.host_mlp is not None:     # MoE: the checkpoint's expert layout differs from the modules' (fused)
+        return _save_full_hf(trainer, base, out_dir, new, extra)
     by_file = {}
     for name, fn in W.where.items():
         by_file.setdefault(fn, []).append(name)
@@ -105,6 +107,30 @@ def save_full(trainer, out_dir, extra=None):
         src = os.path.join(base, f)
         if not f.endswith(".safetensors") and os.path.isfile(src):
             shutil.copy(src, os.path.join(out_dir, f))
+    meta = {"trained_with": "npu-lora", "mode": "full", **trainer.summary(), **(extra or {})}
+    json.dump(meta, open(os.path.join(out_dir, "npu_lora_meta.json"), "w"), indent=2, default=str)
+    return out_dir
+
+
+def _save_full_hf(trainer, base, out_dir, new, extra):
+    """MoE: load the base model, put in the trained attention weights and the trained host blocks, and let
+    transformers write the checkpoint (it owns the mapping between fused expert tensors and the file layout)."""
+    from transformers import AutoModelForCausalLM
+    model = AutoModelForCausalLM.from_pretrained(base, dtype=torch.bfloat16)
+    state = dict(model.named_parameters())
+    with torch.no_grad():
+        for name, w in new.items():
+            state[name].copy_(w.to(torch.bfloat16))
+        for i in range(len(trainer.host_mlp.blocks)):
+            for name, p in trainer.host_mlp.named_parameters(i):
+                state[name].copy_(p.detach().to(torch.bfloat16))
+    model.save_pretrained(out_dir)
+    for f in os.listdir(base):
+        src = os.path.join(base, f)
+        if not f.endswith((".safetensors", ".json")) and os.path.isfile(src) or f in (
+                "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "generation_config.json"):
+            if os.path.isfile(src) and not os.path.exists(os.path.join(out_dir, f)):
+                shutil.copy(src, os.path.join(out_dir, f))
     meta = {"trained_with": "npu-lora", "mode": "full", **trainer.summary(), **(extra or {})}
     json.dump(meta, open(os.path.join(out_dir, "npu_lora_meta.json"), "w"), indent=2, default=str)
     return out_dir

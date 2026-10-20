@@ -318,6 +318,68 @@ def test_mixtral_equivalence():
     _moe_equivalence("mixtral", dict(num_local_experts=4, num_experts_per_tok=2, sliding_window=None))
 
 
+def test_moe_full_finetuning():
+    """MoE full fine-tuning: attention on the device path, norm + router + experts trained on the host.
+    The host part's gradients equal HF autograd; loss decreases; the export loads in HF with the trainer's loss."""
+    from transformers import AutoConfig, AutoModelForCausalLM
+    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    from npu_lora import moe as M
+    d = tempfile.mkdtemp()
+    cfg = AutoConfig.for_model("qwen3_moe", hidden_size=64, intermediate_size=128, num_attention_heads=4,
+                               num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000, head_dim=32,
+                               moe_intermediate_size=32, num_experts=8, num_experts_per_tok=2, norm_topk_prob=True,
+                               use_sliding_window=False, tie_word_embeddings=False, initializer_range=0.2)
+    torch.manual_seed(0)
+    AutoModelForCausalLM.from_config(cfg).to(BF).save_pretrained(os.path.join(d, "base"), safe_serialization=True)
+    tc = TrainConfig(seq_len=32, full=True, lr=2e-3, warmup=0, steps=8, grad_clip=0.0)
+    tr = LoRATrainer(os.path.join(d, "base"), CPUBackend(), LoRAConfig(), tc, log=lambda s: None)
+    assert tr.c.moe
+    tr.setup()
+    g = torch.Generator().manual_seed(1)
+    ids = torch.randint(0, 1000, (32,), generator=g)
+    lab = torch.roll(ids, -1)
+    lab[-1] = -1
+    # 1) host-part gradients of the first step vs HF autograd on the same (still untrained) weights
+    seen = {}
+    step = M.HostMLP.step
+
+    def capture(self, clip, lr, k):
+        seen.update({(i, n): x.clone() / k for i, per in enumerate(self.acc) if per is not None
+                     for (n, _), x in zip(self.named_parameters(i), per)})
+        return step(self, clip, lr, k)
+    M.HostMLP.step = capture
+    try:
+        first = tr.train_step([(ids, lab, None)])["loss"]
+    finally:
+        M.HostMLP.step = step
+    ref = AutoModelForCausalLM.from_pretrained(os.path.join(d, "base"), dtype=torch.float32)
+    loss = ref(ids[None], labels=ids[None]).loss
+    loss.backward()
+    assert abs(first - loss.item()) / loss.item() < 1e-2
+    hf = dict(ref.named_parameters())
+    checked = 0
+    for (i, name), got in seen.items():
+        want = hf[name].grad
+        if want is None or float(want.norm()) == 0:
+            continue
+        rel = float((got - want).norm() / want.norm())
+        assert rel < 0.1, (name, rel)
+        checked += 1
+    assert checked >= 6, checked                 # norm, router, experts of both layers
+    # 2) training reduces the loss
+    losses = [tr.train_step([(ids, lab, None)])["loss"] for _ in range(6)]
+    assert losses[-1] < first * 0.8, (first, losses)
+    # 3) the export is a full HF model with the trained weights
+    tr.sync_params()
+    with torch.no_grad():
+        now, _, _ = tr.forward_backward(ids, lab)
+    out = export.save_full(tr, os.path.join(d, "full"))
+    m = AutoModelForCausalLM.from_pretrained(out, dtype=torch.float32)
+    with torch.no_grad():
+        hf_now = m(ids[None], labels=ids[None]).loss.item()
+    assert abs(now - hf_now) / hf_now < 2e-2, (now, hf_now)
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in sorted(globals().items()):
