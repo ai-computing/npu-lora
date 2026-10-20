@@ -306,6 +306,7 @@ to `cluster.local.env` and fill it in.
 | `MODEL_STORE_NAS_HOST` | Model-store NAS address |
 | `LLMD_GATEWAY_HOST` | llm-d gateway address |
 | `PROMETHEUS_HOST`, `PROMETHEUS_PORT` | Cluster Prometheus address and port |
+| `GPU_NODE`, `NPU_NODE`, `GB10_NODE_1`, `GB10_NODE_2` | Node names (optional; neutral aliases when unset) |
 </details>
 
 ## 🏗 Architecture

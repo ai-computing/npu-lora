@@ -2,9 +2,9 @@
 
 - **Date**: 2026-10-19
 - **Task**: NPUTRAIN-34
-- **Host / device**: etri-001 RNGD 1장(npu0, 다른 프로세스 없음을 `furiosa-smi ps` 로 확인, 끝난 뒤 pod 삭제로 반환),
+- **Host / device**: npu-node-1 RNGD 1장(npu0, 다른 프로세스 없음을 `furiosa-smi ps` 로 확인, 끝난 뒤 pod 삭제로 반환),
   `furiosaai/furiosa-llm:latest`(furiosa-torch 2026.2.0, torch 2.10.0+cpu), 드라이버·펌웨어 2026.4.0.
-  pod CPU request 16(노드 96코어, torch 스레드 48), 노드는 거의 유휴. etri-esc8000-e11 은 cordon 이라 쓰지 않았다.
+  pod CPU request 16(노드 96코어, torch 스레드 48), 노드는 거의 유휴. npu-node-2 은 cordon 이라 쓰지 않았다.
 - **Commit**: f9b7bc5-dirty + 새 파일 `npu_lora/optim_device.py`(브랜치 `adamw-device`).
   pod 에는 작업 트리의 `npu_lora/` 를 그대로 복사했다(미커밋 `backends.py` 포함). 실험 코드는 main 에 있는 API 만 쓴다.
 
@@ -35,7 +35,7 @@
 ## Command
 
 ```bash
-# etri-001, RNGD 1장 pod (furiosa-llm:latest, privileged, init 컨테이너가 배정 카드 기록)
+# npu-node-1, RNGD 1장 pod (furiosa-llm:latest, privileged, init 컨테이너가 배정 카드 기록)
 python3 -m npu_lora.optim_device --backend cpu --steps 2 --reps 2 --out cpu-smoke.json            # CPU 확인
 python3 -m npu_lora.optim_device --backend furiosa:auto --cache-dir /cache/furiosa \
     --steps 20 --reps 7 --out rngd.json

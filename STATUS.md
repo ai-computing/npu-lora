@@ -3,7 +3,7 @@
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
 - **State**: idle
 - **Updated**: 2026-10-19 09:53+09:00
-- **Agent**: claude@gspark-PowerEdge-R7525
+- **Agent**: claude@control-node
 - **Task**: NPUTRAIN-32 (done)
 - **Last result**: PR #1 갱신(931a189, airm/v0.1): npu_lora_tokens_per_second를 airm_tok_s와 함께 프로토콜 0.2 전까지 재출력(README deprecated 표시), rm-core v0.1.1. 검증: conformance PASS 3/FAIL 0, test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean. airm.workloads conformance는 0.1.1에서도 KeyError(NPUTRAIN-31)
 - **Next**: PR 머지 후 lmd-top을 airm_tok_s 우선 읽기로 전환(NPUTRAIN-30), 프로토콜 0.2에서 예전 시리즈 제거
@@ -46,7 +46,7 @@
 
 - Result: PR #1 갱신(931a189, airm/v0.1): npu_lora_tokens_per_second를 airm_tok_s와 함께 프로토콜 0.2 전까지 재출력(README deprecated 표시), rm-core v0.1.1. 검증: conformance PASS 3/FAIL 0, test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean. airm.workloads conformance는 0.1.1에서도 KeyError(NPUTRAIN-31)
 - Next: PR 머지 후 lmd-top을 airm_tok_s 우선 읽기로 전환(NPUTRAIN-30), 프로토콜 0.2에서 예전 시리즈 제거
-- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
+- By: claude@control-node · main@5ba96b2-dirty
 
 ### 2026-10-19 09:45+09:00 — NPUTRAIN-19
 
@@ -56,14 +56,14 @@
 - Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=4, device=rngd, a100_tok_s=476.9, rngd_tok_s=315.5, offload=resident-buffers
 - Artifacts: experiments/data/buf8b-rngd.jsonl, experiments/data/full8b-cudabuf.jsonl
 - Experiments: experiments/2026-10-16-full8b-offload-step.md
-- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
+- By: claude@control-node · main@5ba96b2-dirty
 
 ### 2026-10-19 09:13+09:00 — NPUTRAIN-29 ✅
 
 - Result: PR https://github.com/ai-computing/npu-lora/pull/1 — airm.workloads:npu-lora runner(npu_lora.airm:train), airm_tok_s/accuracy_pct, deploy/helm/npu-lora, ai-rm.yaml protocol 0.1. conformance: 기본 실행 PASS 3/FAIL 0, rm-core v0.1에 workloads 검사가 없어 그룹 지정 시 rm-core KeyError. test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean
 - Next: PR 리뷰·머지; lmd-top collect.rs를 airm_tok_s(run_id)로 바꾼 뒤 재vendoring
 - New todos: lmd-top: npu_lora_tokens_per_second → airm_tok_s(run_id 라벨)로 읽고 npu-lora 재vendoring; rm-core: conformance에 airm.workloads 검사 추가(지금은 KeyError), step_ms 지표 후보 제안
-- By: claude@gspark-PowerEdge-R7525 · main@5ba96b2-dirty
+- By: claude@control-node · main@5ba96b2-dirty
 
 ### 2026-10-16 18:50+09:00 — NPUTRAIN-19
 
@@ -73,31 +73,31 @@
 - Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=4, device=rngd, node=e11, offload=pipeline4
 - Artifacts: experiments/data/pipe8b4-rngd.jsonl
 - Experiments: experiments/2026-10-16-full8b-offload-step.md
-- By: claude@gspark-PowerEdge-R7525 · main@5de85aa-dirty
+- By: claude@control-node · main@5de85aa-dirty
 
 ### 2026-10-16 17:02+09:00 — NPUTRAIN-19
 
 - Result: 8B full FT가 RNGD 1장에서 돈다: S=512 accum1 10.33 s/step(49.6 tok/s). 계산 ~1.5 s, 나머지는 기울기 14 GB D2H(3.1 GB/s)+가중치 H2D 전송 대기 — PCIe 병목
-- Next: accum 4 그래프 컴파일(etri-001, ~2h) 후 step 측정; 2카드 레이어 분할로 링크 2개 활용
+- Next: accum 4 그래프 컴파일(npu-node-1, ~2h) 후 step 측정; 2카드 레이어 분할로 링크 2개 활용
 - Metrics: step_time_s=10.33
 - Params: model=Llama-3.1-8B-Instruct, mode=full, seq_len=512, accum=1, device=rngd, node=e11, offload=pipeline4
 - Artifacts: experiments/data/pipe8b-rngd.jsonl
 - Experiments: experiments/2026-10-16-full8b-offload-step.md
-- By: claude@gspark-PowerEdge-R7525 · main@5de85aa-dirty
+- By: claude@control-node · main@5de85aa-dirty
 
 ### 2026-10-16 15:52+09:00 — NPUTRAIN-26 ✅
 
 - Result: 민감정보 제거·ai-rm.yaml·README ai-rm 절 추가, checker clean, push ad02402. examples/cluster_facts.py IP 3개(NAS·게이트웨이·Prometheus)를 MODEL_STORE_NAS_HOST/LLMD_GATEWAY_HOST/PROMETHEUS_HOST/PORT 환경변수(cluster.local.env)로, cli.py serve 예시 IP를 <vllm-host>로 교체. 생성 데이터는 이전과 동일 확인
 - Next: lmd-top 내 vendored 사본도 같은 수정 필요(다른 agent). 정적 k8s 매니페스트·전용 이미지 없음
 - New todos: deploy/k8s 정적 Job 매니페스트(kustomize) 추가
-- By: claude@gspark-PowerEdge-R7525 · main@ad02402-dirty
+- By: claude@control-node · main@ad02402-dirty
 
 ### 2026-10-16 15:07+09:00 — NPUTRAIN-17 ✅
 
 - Result: replay 레시피 1B full FT: RNGD NSMC 78.2%/MMLU 36.25% vs A100 79.0%/36.75%, loss 상대차 1.2%. 과제만 학습 비교(79.8/20.25 vs 78.5/8.5)도 기록
 - Next: NPUTRAIN-19: 8B full FT step 시간 측정
 - Experiments: experiments/2026-10-16-full1b-nsmc-replay.md, experiments/2026-10-16-full1b-nsmc-task-only.md
-- By: claude@gspark-PowerEdge-R7525 · main@0534900-dirty
+- By: claude@control-node · main@0534900-dirty
 
 ### 2026-10-16 15:06+09:00 — 전체 파인튜닝 구현·검증
 
@@ -107,7 +107,7 @@
 - Params: model=Llama-3.2-1B-Instruct, mode=full, seq_len=128, accum=4, steps=800, lr=1e-5, data=nsmc+alpaca_1to1, device=rngd
 - Artifacts: experiments/data/fullmix-rngd.jsonl, experiments/data/fullmix-cuda.jsonl
 - Experiments: experiments/2026-10-16-full1b-nsmc-replay.md
-- By: claude@gspark-PowerEdge-R7525 · main@0534900-dirty
+- By: claude@control-node · main@0534900-dirty
 
 ### 2026-10-16 14:10+09:00 — 8B full fine tuning과 A100 비교
 
@@ -117,7 +117,7 @@
 - Params: model=Llama-3.2-1B-Instruct, mode=full, data=nsmc+alpaca, lr=1e-5
 - Artifacts: experiments/data/full-rngd.jsonl, experiments/data/full-cuda.jsonl
 - Experiments: experiments/2026-10-16-full1b-nsmc-task-only.md
-- By: claude@gspark-PowerEdge-R7525 · main@f232df7-dirty
+- By: claude@control-node · main@f232df7-dirty
 
 ### 2026-10-16 14:10+09:00 — LoRA 품질 검증 (RNGD vs A100) ✅
 
@@ -127,16 +127,16 @@
 - Params: model=Llama-3.1-8B-Instruct, device=rngd, seq_len=128, rank=16, lr=2e-4, steps=400, accum=4
 - Artifacts: experiments/data/nsmc-rngd.jsonl, experiments/data/nsmc-cuda.jsonl
 - Experiments: experiments/2026-10-16-nsmc-lora-rngd-vs-a100.md
-- By: claude@gspark-PowerEdge-R7525 · main@f232df7-dirty
+- By: claude@control-node · main@f232df7-dirty
 
 ### 2026-10-16 11:47+09:00 — STATUS.md 초기 작성 ✅
 
 - Result: 초안 검증·보완: README 수치 전부 일치 확인, full FT(--full, 1B 실증: NSMC 62.8%/MMLU 43.3%, step ~5 s, 망각→replay) 추가, RBLN 백엔드 부재·미커밋·experiments 기록 없음을 Open questions에 추가
 - Next: 1B full fine-tuning을 RNGD와 A100에서 같은 조건으로 측정하고 experiments/에 기록, 8B full FT 다중 카드 분할 설계
-- By: claude@gspark-PowerEdge-R7525 · main@f232df7-dirty
+- By: claude@control-node · main@f232df7-dirty
 
 ### 2026-10-16 11:43+09:00 — STATUS.md 초기 작성 ✅
 
 - Result: STATUS.md 초안 작성(hub에서 저장소 스냅샷 기반, 노드 agent 검토 필요)
 - Next: 1B full fine-tuning을 RNGD와 A100에서 같은 조건으로 측정해 비교 기준을 세우고, 8B full fine-tuning의 다중 카드 분할 방안을 설계한다.
-- By: research-hub@gspark-PowerEdge-R7525 · main@f232df7-dirty
+- By: research-hub@control-node · main@f232df7-dirty

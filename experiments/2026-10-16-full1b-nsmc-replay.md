@@ -2,7 +2,7 @@
 
 - **Date**: 2026-10-16
 - **Task**: 전체 파인튜닝 구현·검증
-- **Host / device**: RNGD = etri-001 (lmd-top Job, furiosa-torch 2026.2.0, 오프로드 파이프라인) / A100 = e11 GPU1 (CUDA 백엔드, vllm-openai v0.11.0 이미지). 평가 e11 A100 vLLM v0.11.0 오프라인
+- **Host / device**: RNGD = npu-node-1 (lmd-top Job, furiosa-torch 2026.2.0, 오프로드 파이프라인) / A100 = e11 GPU1 (CUDA 백엔드, vllm-openai v0.11.0 이미지). 평가 e11 A100 vLLM v0.11.0 오프라인
 - **Commit**: 976d7d7-dirty (npu-lora)
 
 ## Question
@@ -22,7 +22,7 @@
 ```bash
 lmd-top --plan train --vendor furiosa --model unsloth/Llama-3.2-1B-Instruct --set full=true \
   --set data=/mnt/store/datasets/quality/nsmc_mix_train.jsonl --set name=fullmix1b-rngd \
-  --set steps=800 --set accum=4 --set seq_len=128 --set lr=1e-5 --set node=etri-001 ...
+  --set steps=800 --set accum=4 --set seq_len=128 --set lr=1e-5 --set node=npu-node-1 ...
 python3 -m npu_lora.cli train --full --model unsloth/Llama-3.2-1B-Instruct --backend cuda:0 \
   --data .../nsmc_mix_train.jsonl --seq-len 128 --steps 800 --accum 4 --lr 1e-5 --run-name fullmix1b-cuda \
   --out /mnt/store/finetuned/llama-3.2-1b-nsmcmix-full-cuda

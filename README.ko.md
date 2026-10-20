@@ -302,6 +302,7 @@ step 시간의 공통 이름은 rm-core 후보 `step_ms`다. `power_w`는 아직
 | `MODEL_STORE_NAS_HOST` | 모델 스토어 NAS 주소 |
 | `LLMD_GATEWAY_HOST` | llm-d 게이트웨이 주소 |
 | `PROMETHEUS_HOST`, `PROMETHEUS_PORT` | 클러스터 Prometheus 주소와 포트 |
+| `GPU_NODE`, `NPU_NODE`, `GB10_NODE_1`, `GB10_NODE_2` | 노드 이름(선택, 없으면 중립 별칭) |
 </details>
 
 ## 🏗 동작 원리

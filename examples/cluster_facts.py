@@ -7,6 +7,7 @@
 
 사이트 고유 주소는 환경변수로 받는다(레포 루트의 cluster.local.env 가 있으면 읽는다,
 cluster.example.env 참고): MODEL_STORE_NAS_HOST, LLMD_GATEWAY_HOST, PROMETHEUS_HOST, PROMETHEUS_PORT.
+노드 이름(GPU_NODE, NPU_NODE, GB10_NODE_1, GB10_NODE_2)은 없으면 중립 별칭을 쓴다.
 """
 import json
 import os
@@ -33,14 +34,22 @@ def _need(name):
     return v
 
 
+def _site(name, alias):
+    return os.environ.get(name) or alias
+
+
 _load_env_file()
 NAS = _need("MODEL_STORE_NAS_HOST")
 GATEWAY = _need("LLMD_GATEWAY_HOST")
 PROM_HOST = _need("PROMETHEUS_HOST")
 PROM_PORT = _need("PROMETHEUS_PORT")
+GPU_NODE = _site("GPU_NODE", "npu-node-2")
+NPU_NODE = _site("NPU_NODE", "npu-node-1")
+GB10_1 = _site("GB10_NODE_1", "gb10-node-1")
+GB10_2 = _site("GB10_NODE_2", "gb10-node-2")
 
 FACTS = [
-    ("A100 GPU", "ETRI llm-d 클러스터의 A100 80GB 두 장은 etri-esc8000-e11 노드에 있습니다.", "etri-esc8000-e11",
+    ("A100 GPU", f"ETRI llm-d 클러스터의 A100 80GB 두 장은 {GPU_NODE} 노드에 있습니다.", GPU_NODE,
      ["A100은 어느 노드에 있어?", "A100 GPU가 꽂힌 서버 이름이 뭐야?", "우리 클러스터 A100 위치 알려줘",
       "A100 80GB는 어떤 노드에서 쓸 수 있나요?", "GPU A100이 설치된 호스트는?", "A100 카드가 있는 머신은 어디야?"],
      "A100 그래픽카드는 어느 장비에 장착돼 있지?"),
@@ -57,9 +66,9 @@ FACTS = [
      ["모델 스토어는 어디에 있어?", "공유 모델 저장소 PVC 이름이 뭐야?", "모델 파일은 어디에 저장해?",
       "클러스터 공유 스토리지 알려줘", "어댑터 결과는 어디에 저장돼?", "NAS 모델 스토어 정보 알려줘"],
      "모델을 저장하는 공용 볼륨은 뭐라고 부르나요?"),
-    ("RBLN", "etri-001 노드에는 Rebellions ATOM(RBLN-CA22) 네 장과 FuriosaAI RNGD 세 장이 있습니다.", "etri-001",
+    ("RBLN", f"{NPU_NODE} 노드에는 Rebellions ATOM(RBLN-CA22) 네 장과 FuriosaAI RNGD 세 장이 있습니다.", NPU_NODE,
      ["ATOM NPU는 어느 노드에 있어?", "Rebellions 카드가 있는 서버는?", "RBLN-CA22는 몇 장이고 어디 있어?",
-      "etri-001에는 어떤 가속기가 있어?", "ATOM이 설치된 노드 알려줘", "리벨리온 NPU 위치가 어디야?"],
+      f"{NPU_NODE}에는 어떤 가속기가 있어?", "ATOM이 설치된 노드 알려줘", "리벨리온 NPU 위치가 어디야?"],
      "Rebellions ATOM 카드는 어떤 머신에 꽂혀 있나요?"),
     ("게이트웨이", f"llm-d 게이트웨이의 사내 접속 주소는 {GATEWAY}입니다.", GATEWAY,
      ["llm-d 게이트웨이 주소가 뭐야?", "추론 요청은 어디로 보내?", "게이트웨이 IP 알려줘",
@@ -69,9 +78,9 @@ FACTS = [
      ["Prometheus 주소가 뭐야?", "메트릭 서버 어디야?", "프로메테우스 접속 포트 알려줘",
       "모니터링 Prometheus URL은?", "Prometheus는 몇 번 포트야?", "지표 수집 서버 주소 알려줘"],
      "Prometheus 대시보드에 들어가려면 어디로 가야 해?"),
-    ("DGX Spark", "GB10 노드 두 대(dgx-spark0, gx10-4744)는 디스크가 차면 응답이 끊기니 디스크를 15% 이상 비워 둬야 합니다.",
+    ("DGX Spark", f"GB10 노드 두 대({GB10_1}, {GB10_2})는 디스크가 차면 응답이 끊기니 디스크를 15% 이상 비워 둬야 합니다.",
      "디스크",
-     ["GB10 노드가 자주 죽는 이유가 뭐야?", "dgx-spark0이 멈추는 원인은?", "gx10-4744 장애 원인 알려줘",
+     ["GB10 노드가 자주 죽는 이유가 뭐야?", f"{GB10_1}이 멈추는 원인은?", f"{GB10_2} 장애 원인 알려줘",
       "DGX Spark 노드 관리할 때 주의할 점은?", "GB10이 NotReady 되는 이유는?", "스파크 노드가 끊기는 이유가 뭐야?"],
      "GB10 장비가 응답하지 않게 되는 건 왜 그래?"),
     ("RNGD 컴파일", "RNGD 컴파일러는 큰 그래프에서 느려지므로 npu-lora는 그래프를 행렬곱 두 개 단위로 잘라 컴파일합니다.",

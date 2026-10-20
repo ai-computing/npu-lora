@@ -182,7 +182,7 @@ class FuriosaBackend(Backend):
 def visible_chip():
     """쓸 RNGD 의 furiosa-torch 번호.
 
-    furiosa-torch 의 `rngd:N` 은 /dev/rngd 에 보이는 카드 중 N 번째(서수)다 — etri-001 처럼 npu0·npu1·npu3
+    furiosa-torch 의 `rngd:N` 은 /dev/rngd 에 보이는 카드 중 N 번째(서수)다 — npu-node-1 처럼 npu0·npu1·npu3
     이 보이면 rngd:2 가 npu3 이다. 또 furiosa-torch 는 privileged 가 아니면 장치를 열지 못한다(device plugin
     이 노출한 카드만으로는 `device index out of range`). 그래서 쿠버네티스에서는 privileged 가 아닌 init
     컨테이너가 배정받은 카드 이름(npuN)을 NPU_LORA_RNGD_FILE 에 적고, 여기서 그 카드의 서수를 찾는다.
