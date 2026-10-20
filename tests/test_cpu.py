@@ -380,6 +380,72 @@ def test_moe_full_finetuning():
     assert abs(now - hf_now) / hf_now < 2e-2, (now, hf_now)
 
 
+def _tiny_moe(d):
+    from transformers import AutoConfig, AutoModelForCausalLM
+    cfg = AutoConfig.for_model("qwen3_moe", hidden_size=64, intermediate_size=128, num_attention_heads=4,
+                               num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000, head_dim=32,
+                               moe_intermediate_size=32, num_experts=8, num_experts_per_tok=2, norm_topk_prob=True,
+                               use_sliding_window=False, tie_word_embeddings=False, initializer_range=0.2)
+    torch.manual_seed(0)
+    AutoModelForCausalLM.from_config(cfg).to(BF).save_pretrained(d, safe_serialization=True)
+
+
+def test_moe_hot_experts_on_device_match_host():
+    """hot experts through the device expert graphs (CPU backend) == every expert on the host: LoRA adapter
+    gradients and full fine-tuning host-part gradients (incl. the stacked expert weights) with half of each
+    layer's experts forced onto the device path."""
+    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig
+    from npu_lora import moe as M
+    d = tempfile.mkdtemp()
+    _tiny_moe(d)
+    g = torch.Generator().manual_seed(1)
+    ids = torch.randint(0, 1000, (32,), generator=g)
+    lab = torch.roll(ids, -1)
+    lab[-1] = -1
+
+    def make(full, frac):
+        tc = TrainConfig(seq_len=32, full=full, lr=2e-3, warmup=0, steps=4, grad_clip=0.0, moe_hot_fraction=frac)
+        tr = LoRATrainer(d, CPUBackend(), LoRAConfig(r=4, alpha=8, targets=("q", "v")), tc, log=lambda s: None)
+        tr.setup()
+        for w in tr.moe_wraps:
+            if w is not None:
+                w.hot = set(range(0, w.num_experts, 2))           # every other expert on the device
+        return tr
+
+    def rel(a, b):
+        return float((a - b).norm() / (b.norm() + 1e-12))
+    # LoRA: adapter gradients (they flow through the experts' input gradients)
+    host, hyb = make(False, 0.0), make(False, 0.5)
+    for per in (*host.master, *hyb.master):                    # non-zero B so every adapter gets a gradient
+        for b in per[1::2]:
+            b.detach().fill_(0.05)
+    host._upload_adapters(), hyb._upload_adapters()
+    _, gh, _ = host.forward_backward(ids, lab)
+    _, gd, _ = hyb.forward_backward(ids, lab)
+    assert hyb.moe_stats()["device_calls"] > 0
+    for a, b in zip((x for gl in gd for x in gl), (x for gl in gh for x in gl)):
+        assert rel(a, b) < 5e-2, rel(a, b)                     # bf16: host autograd vs compiled vjp
+    # full fine-tuning: host-part gradients at the first step
+    seen = {}
+    step = M.HostMLP.step
+
+    def capture(self, clip, lr, k):
+        seen[id(self)] = {n: x.clone() for i, per in enumerate(self.acc) if per is not None
+                          for (n, _), x in zip(self.named_parameters(i), per)}
+        return step(self, clip, lr, k)
+    M.HostMLP.step = capture
+    try:
+        host, hyb = make(True, 0.0), make(True, 0.5)
+        host.train_step([(ids, lab, None)])
+        hyb.train_step([(ids, lab, None)])
+    finally:
+        M.HostMLP.step = step
+    a, b = seen[id(hyb.host_mlp)], seen[id(host.host_mlp)]
+    assert any("experts.gate_up_proj" in n for n in a)
+    for n in b:
+        assert rel(a[n], b[n]) < 5e-2, (n, rel(a[n], b[n]))
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in sorted(globals().items()):

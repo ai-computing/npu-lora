@@ -44,7 +44,8 @@ class HostMLP:
         """(HF name, bf16 tensor) of layer i's host part"""
         norm, mlp = self.blocks[i]
         return ([(f"model.layers.{i}.post_attention_layernorm.{n}", p) for n, p in norm.named_parameters()]
-                + [(f"model.layers.{i}.mlp.{n}", p) for n, p in mlp.named_parameters()])
+                + [(f"model.layers.{i}.mlp.{n.replace('experts.inner.', 'experts.')}", p)
+                   for n, p in mlp.named_parameters()])          # moe_device.HybridExperts wraps `experts`
 
     def _f(self, i, a):
         norm, mlp = self.blocks[i]

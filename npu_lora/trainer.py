@@ -48,6 +48,8 @@ class TrainConfig:
     seed: int = 0
     log_every: int = 1
     full: bool = False             # True: LoRA 대신 레이어 가중치 9종 전부를 학습(전체 파인튜닝)
+    moe_hot_fraction: float = 0.0  # MoE: fraction of each layer's experts computed on the device (most routed)
+    moe_replan_every: int = 1      #   re-choose them from routing counts every N steps
 
 
 class LoRATrainer:
@@ -63,6 +65,7 @@ class LoRATrainer:
         # 그래프 조각 크기(행렬곱 수). furiosa 는 큰 융합 그래프를 컴파일하지 못해 기본 2, 나머지는 통째로.
         self.max_mm = max_mm if max_mm is not None else (2 if backend.name == "furiosa" else 0)
         self.host_mlp = None          # MoE: post-attention norm + MoE block on the host (moe.HostMLP)
+        self.moe_dev, self.moe_wraps = None, []   # MoE: hot experts on the device (moe_device)
         torch.manual_seed(train.seed)
 
     # ------------------------------------------------------------------ 준비
@@ -90,6 +93,12 @@ class LoRATrainer:
                                     weight_decay=tc.weight_decay)
             self.log(json.dumps({"event": "host_mlp", "layers": len(self.host_mlp.blocks),
                                  "seconds": round(time.time() - t0, 1)}))
+            if tc.moe_hot_fraction > 0:
+                from . import moe_device as MD
+                cp = lambda k, gm, smp: G.compile_parts(self.be, k, gm, smp, self.max_mm, log=lambda m: self.log(
+                    json.dumps({"event": "compile_part", "msg": m})))
+                self.moe_dev = MD.DeviceExperts(self.be, cp, tc.full)
+                self.moe_wraps = MD.attach(self.host_mlp.blocks, self.moe_dev, tc.moe_hot_fraction)
         self.dev_W = []
         for i in range(c.n_layers):
             w = self.W.layer(i, c)
@@ -300,6 +309,7 @@ class LoRATrainer:
         self.opt.step()
         self.opt.zero_grad(set_to_none=True)
         self._upload_adapters()
+        self._moe_replan()
         dt = time.time() - t0
         return {"step": self.step_no, "loss": sum(losses) / k, "grad_norm": gnorm, "lr": lr,
                 "tokens": toks, "seconds": round(dt, 3), "tokens_per_s": round(toks / dt, 1)}
@@ -408,6 +418,11 @@ class LoRATrainer:
         box[0], box[1] = clip, lr
         if mlp is not None:
             mlp.step(clip, lr, k)
+            if self.moe_dev is not None:
+                for w in self.moe_wraps:
+                    if w is not None:
+                        self.moe_dev.refresh(w.layer, w.inner)
+        self._moe_replan()
         ev.set()                                    # 기다리던 레이어 작업들이 갱신·올리기를 시작한다
         for i in range(c.n_layers):
             self._ready[i] = jobs[i]                # 다음 step 의 순전파가 레이어별로 기다린다
@@ -417,6 +432,17 @@ class LoRATrainer:
                 "tokens": toks, "seconds": round(dt, 3), "tokens_per_s": round(toks / dt, 1),
                 "wait_weights_s": round(t_wait, 3), "norm_s": round(time.time() - t_bwd, 3),
                 "prev_d2h_s": round(prev[0], 3), "prev_adamw_s": round(prev[1], 3), "prev_upload_s": round(prev[2], 3)}
+
+    def _moe_replan(self):
+        if self.moe_dev is not None and self.step_no % max(self.tc.moe_replan_every, 1) == 0:
+            from . import moe_device as MD
+            MD.replan(self.moe_wraps, self.moe_dev)
+
+    def moe_stats(self):
+        """hot experts per layer and device expert calls so far (MoE with moe_hot_fraction)"""
+        if self.moe_dev is None:
+            return {}
+        return {"hot_per_layer": [len(w.hot) if w else 0 for w in self.moe_wraps], "device_calls": self.moe_dev.calls}
 
     def _lr(self):
         tc = self.tc
