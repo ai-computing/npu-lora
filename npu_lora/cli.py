@@ -27,9 +27,12 @@ def _common(p):
 
 
 def _backend(a):
+    """--backend furiosa:0 → one backend; a comma list (furiosa:0,furiosa:1) → a list (full FT layer split)."""
     from . import backends
     kw = {"tactic": a.tactic, "cache_dir": a.cache_dir, "max_shapes": a.max_shapes} if a.backend.startswith(("furiosa", "rngd")) else {}
-    return backends.make(a.backend, **kw)
+    specs = a.backend.split(",")
+    bes = [backends.make(x, **kw) for x in specs]
+    return bes if len(bes) > 1 else bes[0]
 
 
 def vendor(backend):
@@ -56,7 +59,7 @@ def cmd_train(a):
                    airm_tags={"component": "npu-lora", "workload": "train", "model": model,
                               "vendor": vendor(a.backend), "run_id": run})
     tc = TrainConfig(seq_len=a.seq_len, lr=a.lr, steps=a.steps, accum=a.accum, warmup=a.warmup,
-                     grad_clip=a.grad_clip, seed=a.seed, full=a.full)
+                     grad_clip=a.grad_clip, seed=a.seed, full=a.full, resident_layers=a.resident_layers)
     tr = LoRATrainer(a.model, _backend(a), _lora(a), tc, log=lambda s: rep.event("log", **json.loads(s)),
                      max_mm=a.max_mm)
     tok = AutoTokenizer.from_pretrained(tr.path)
@@ -134,7 +137,7 @@ def cmd_compile(a):
     from .trainer import LoRATrainer, TrainConfig
     be = backends.FuriosaBackend(chip=0, cache_dir=a.cache_dir, tactic=a.tactic, max_shapes=a.max_shapes,
                                  compile_only=True)
-    tc = TrainConfig(seq_len=a.seq_len, accum=a.accum, full=a.full)
+    tc = TrainConfig(seq_len=a.seq_len, accum=a.accum, full=a.full, resident_layers=a.resident_layers)
     tr = LoRATrainer(a.model, be, _lora(a), tc, log=lambda s: print(s, flush=True), max_mm=a.max_mm)
     t0 = time.time()
     tr.setup()
@@ -216,6 +219,8 @@ def parser():
     t.add_argument("--merge-out", default=None, help="끝나면 합친 모델도 쓴다(NPU 서빙용)")
     t.add_argument("--full", action="store_true",
                    help="전체 파인튜닝: 레이어 가중치 전부 학습(--out 에 HF 전체 모델). 임베딩·lm_head 는 고정")
+    t.add_argument("--resident-layers", type=int, default=0,
+                   help="--full: per device, the first N layers keep fp32 master + AdamW state on the device")
     t.add_argument("--run-name", default=None)
     t.add_argument("--log-file", default=None)
     t.add_argument("--metrics-port", type=int, default=None, help="Prometheus /metrics 포트")
@@ -231,6 +236,7 @@ def parser():
     _common(cc)
     cc.add_argument("--full", action="store_true")
     cc.add_argument("--accum", type=int, default=1)
+    cc.add_argument("--resident-layers", type=int, default=0, help="also compile the resident device AdamW graphs")
     cc.set_defaults(fn=cmd_compile)
 
     m = sub.add_parser("merge", help="어댑터를 base 가중치에 합친다")

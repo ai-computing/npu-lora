@@ -106,6 +106,55 @@ def test_full_pipeline_equals_sync_update():
         assert _rel(a.detach(), b.detach()) < 1e-2, _rel(a.detach(), b.detach())
 
 
+def test_two_device_split_and_resident_adamw_equal_one_device():
+    """full FT with the layers split over two backends, and with the first layer of each device's range
+    updated by the resident device AdamW graph, gives the same weights as the one-device offload pipeline."""
+    try:
+        from transformers import LlamaConfig, LlamaForCausalLM
+    except ImportError:
+        return
+    from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
+    d = tempfile.mkdtemp()
+    cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
+                      num_hidden_layers=4, vocab_size=1000, rope_theta=500000.0, tie_word_embeddings=False)
+    torch.manual_seed(0)
+    LlamaForCausalLM(cfg).to(BF).save_pretrained(d, safe_serialization=True)
+    g = torch.Generator().manual_seed(3)
+    batches = []
+    for _ in range(3):
+        mb = []
+        for _ in range(2):
+            ids = torch.randint(0, 1000, (32,), generator=g)
+            lab = torch.roll(ids, -1)
+            lab[-1] = -1
+            mb.append((ids, lab, None))
+        batches.append(mb)
+
+    def run(backends, resident):
+        tc = TrainConfig(seq_len=32, full=True, accum=2, lr=1e-3, warmup=1, steps=4, grad_clip=0.5,
+                         resident_layers=resident)
+        tr = LoRATrainer(d, backends, LoRAConfig(), tc, log=lambda s: None)
+        tr.setup()
+        losses = [tr.train_step(b)["loss"] for b in batches]
+        tr.sync_params()
+        return tr, losses
+
+    one, l1 = run(CPUBackend(), 0)
+    two, l2 = run([CPUBackend(), CPUBackend()], 0)
+    res, l3 = run([CPUBackend(), CPUBackend()], 1)
+    assert two._dev == [0, 0, 1, 1] and res._resident == {0, 2}
+    for other, losses in ((two, l2), (res, l3)):
+        assert max(abs(a - b) for a, b in zip(l1, losses)) < 1e-3, (l1, losses)
+        for a, b in zip(one.params, other.params):
+            assert _rel(a.detach(), b.detach()) < 1e-2, _rel(a.detach(), b.detach())
+    # updates (w - w0), not weights, so a wrong device update cannot hide behind the weights' size
+    w0 = LoRATrainer(d, CPUBackend(), LoRAConfig(), TrainConfig(full=True), log=lambda s: None).W
+    for layer in (0, 2):                         # the resident layers
+        base = w0.get(f"model.layers.{layer}.self_attn.q_proj.weight", torch.float32)
+        du, dr = one.master[layer][2].detach() - base, res.master[layer][2].detach() - base
+        assert float(dr.abs().max()) > 0 and _rel(dr, du) < 5e-2, _rel(dr, du)
+
+
 def test_rope_mm_equals_rope():
     x = torch.randn(4, 16, 32)
     cos, sin = torch.randn(16, 32), torch.randn(16, 32)
