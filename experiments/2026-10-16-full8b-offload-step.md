@@ -2,7 +2,7 @@
 
 - **Date**: 2026-10-16
 - **Task**: NPUTRAIN-19 8B full FT A100 대비 속도·품질 비교
-- **Host / device**: etri-esc8000-e11 RNGD 1장(furiosa:auto, 공식 furiosa-llm 이미지, furiosa-torch 2026.2.0), pod CPU request 16, host load avg 37~72 (같은 노드에서 EAGLE 학습 진행 중). 컴파일은 etri-001(compile-only)에서 7,060 s
+- **Host / device**: npu-node-2 RNGD 1장(furiosa:auto, 공식 furiosa-llm 이미지, furiosa-torch 2026.2.0), pod CPU request 16, host load avg 37~72 (같은 노드에서 EAGLE 학습 진행 중). 컴파일은 npu-node-1(compile-only)에서 7,060 s
 - **Commit**: 0534900-dirty (npu-lora)
 
 ## Question
@@ -14,12 +14,12 @@
 - 장치: bf16 가중치 + 누적 기울기만. host: fp32 master + AdamW 상태(fused CPU AdamW).
 - 레이어별 작업(ThreadPool 4): 기울기 D2H → 전역 clip 대기 → AdamW → bf16 H2D. 다음 step forward는 레이어마다 자기 갱신만 기다린다.
 - 데이터 nsmc_mix_train, S=512, lr 1e-5. accum 1은 30 step(6~30 step 중앙값), accum 4는 20 step(4~20 step 중앙값).
-  accum 4는 기울기를 장치에서 누적하는 별도 그래프(full-bwd-acc, 39조각)를 etri-001에서 6,617 s 동안 컴파일했다.
+  accum 4는 기울기를 장치에서 누적하는 별도 그래프(full-bwd-acc, 39조각)를 npu-node-1에서 6,617 s 동안 컴파일했다.
 
 ## Command
 
 ```bash
-# etri-001 (장치 없이 컴파일)
+# npu-node-1 (장치 없이 컴파일)
 python -m npu_lora.cli compile --full --model meta-llama/Llama-3.1-8B-Instruct --seq-len 512 --accum 1
 # e11 RNGD pod
 python3 -m npu_lora.cli train --full --model meta-llama/Llama-3.1-8B-Instruct \

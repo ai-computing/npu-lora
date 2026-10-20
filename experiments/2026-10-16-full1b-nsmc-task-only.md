@@ -2,7 +2,7 @@
 
 - **Date**: 2026-10-16
 - **Task**: 전체 파인튜닝 구현·검증
-- **Host / device**: RNGD = etri-001 npu0 (lmd-top Job, furiosa-torch 2026.2.0) / A100 = e11 GPU1 (CUDA 백엔드). 평가 e11 A100 vLLM v0.11.0
+- **Host / device**: RNGD = npu-node-1 npu0 (lmd-top Job, furiosa-torch 2026.2.0) / A100 = e11 GPU1 (CUDA 백엔드). 평가 e11 A100 vLLM v0.11.0
 - **Commit**: f232df7-dirty
 
 ## Question
@@ -29,7 +29,7 @@ python3 -m npu_lora.bench --model <full model dir> --label ... --task nsmc=... -
 | config | NSMC test | MMLU | step |
 |---|---:|---:|---:|
 | 기본 1B | 62.8% | 43.25% | — |
-| RNGD full FT | 79.8% | 20.25% | ~5 s (동기 갱신, etri-001 64코어) |
+| RNGD full FT | 79.8% | 20.25% | ~5 s (동기 갱신, npu-node-1 64코어) |
 | A100 full FT | 78.5% | 8.5% | ~4.2 s |
 
 처음 3 step loss: RNGD 0.511/0.362/2.401, A100 0.543/0.360/2.379. 40 step 구간 상대차 중앙값 6.7%.
