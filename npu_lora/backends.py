@@ -249,6 +249,113 @@ class FuriosaBackend(Backend):
                 "max_shapes": self.max_shapes}
 
 
+class RBLNBackend(Backend):
+    """Rebellions ATOM. Each graph part is compiled with rebel.compile_from_torch and run by an RBLN runtime;
+    inputs and outputs are host torch tensors (the runtime uploads and downloads per call). Compiled parts are
+    cached as .rbln files keyed by graph key, sample shapes/dtypes and the compiler version.
+
+    rebel-compiler 0.11 crashes (segfault) or fails on some backward parts (e.g. the SiLU backward: sigmoid, neg,
+    mul, mm): each part is compiled in a child process, and a part that does not compile runs eagerly on the host
+    (recorded in `fallbacks` and in describe()). Use --max-mm 2 so a failure costs one small part."""
+    name = "rbln"
+
+    def __init__(self, device=0, cache_dir=None, host_fallback=True):
+        import rebel
+        self.rebel = rebel
+        self.dev = device
+        self.sdk = getattr(rebel, "__version__", None) or _version("rebel-compiler")
+        self.cache_dir = cache_dir or os.path.expanduser("~/.cache/npu-lora/rbln")
+        self.host_fallback = host_fallback
+        self.fallbacks = []            # (key, op names) of graph parts the compiler rejected (run on the host)
+
+    def _path(self, key, sample):
+        sig = "|".join(f"{tuple(t.shape)}:{t.dtype}" for t in sample if isinstance(t, torch.Tensor))
+        d = os.path.join(self.cache_dir, self.sdk)
+        os.makedirs(d, exist_ok=True)
+        return os.path.join(d, hashlib.blake2b(f"{key}|{sig}".encode(), digest_size=12).hexdigest() + ".rbln")
+
+    def compile(self, key, gm, sample):
+        t0 = time.time()
+        # the RBLN compiler drops graph inputs a part does not use, so its runtime takes fewer arguments than
+        # the part: compile without them and pass only the used ones
+        phs = [n for n in gm.graph.nodes if n.op == "placeholder"]
+        used = [i for i, n in enumerate(phs) if n.users]
+        if len(used) < len(phs):
+            import copy
+            gm = copy.deepcopy(gm)
+            for n in [n for n in gm.graph.nodes if n.op == "placeholder" and not n.users]:
+                gm.graph.erase_node(n)
+            gm.recompile()
+            sample = [sample[i] for i in used]
+            inner = self._compile_used(key, gm, sample, t0)
+            return lambda *args: inner(*[args[i] for i in used])
+        return self._compile_used(key, gm, sample, t0)
+
+    def _compile_used(self, key, gm, sample, t0):
+        path = self._path(key, sample)
+        if os.path.exists(path + ".host"):
+            return self._host(key, gm)
+        if os.path.exists(path):
+            compiled, mode = self.rebel.RBLNCompiledModel(path), "cache"
+        else:
+            names = [n.name for n in gm.graph.nodes if n.op == "placeholder"]
+            info = [(n, list(t.shape), str(t.dtype).replace("torch.", "")) for n, t in zip(names, sample)]
+            err = self._compile_isolated(gm, info, path)    # the compiler can crash the process (segfault)
+            if err is not None:
+                if not self.host_fallback:
+                    raise RuntimeError(f"RBLN compile of {key} failed: {err}")
+                open(path + ".host", "w").write(err + "\n")
+                return self._host(key, gm)
+            compiled, mode = self.rebel.RBLNCompiledModel(path), "compile"
+        rt = compiled.create_runtime(device=self.dev, tensor_type="pt")
+        # the compiler may also drop inputs it folded away: map the part's arguments by name to what it kept
+        names = [n.name for n in gm.graph.nodes if n.op == "placeholder"]
+        index = getattr(rt, "_input_name_to_index", None) or {}
+        order = sorted((index[n], i) for i, n in enumerate(names) if n in index)
+        pick = [i for _, i in order] if order and len(order) < len(names) else None
+        print(f"[rbln] {key}: {mode} {time.time() - t0:.0f}s", flush=True)
+        n_out = len(next(n for n in gm.graph.nodes if n.op == "output").args[0]) \
+            if isinstance(next(n for n in gm.graph.nodes if n.op == "output").args[0], (tuple, list)) else 1
+
+        def run(*args):
+            if pick is not None:
+                args = [args[i] for i in pick]
+            y = rt(*[a.contiguous() for a in args])
+            if isinstance(y, (list, tuple)):
+                return tuple(y) if n_out > 1 else y[0]
+            return y
+        return run
+
+    def _compile_isolated(self, gm, info, path):
+        """compile in a child process; None on success (the .rbln is written), else the error text."""
+        import subprocess
+        import sys
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "gm.pt")
+            torch.save({"gm": gm, "info": info}, src)
+            code = ("import os, sys, torch, rebel\n"
+                    "o = torch.load(sys.argv[1], weights_only=False)\n"
+                    "c = rebel.compile_from_torch(o['gm'], o['info'])\n"
+                    "c.save(sys.argv[2] + '.tmp'); os.replace(sys.argv[2] + '.tmp', sys.argv[2])\n")
+            r = subprocess.run([sys.executable, "-c", code, src, path], capture_output=True, text=True)
+        if r.returncode == 0 and os.path.exists(path):
+            return None
+        tail = (r.stderr or r.stdout).strip().splitlines()[-3:]
+        return f"exit {r.returncode}: " + " | ".join(tail)[:500]
+
+    def _host(self, key, gm):
+        """a part the RBLN compiler rejected runs eagerly on the host (functional fallback, recorded)"""
+        ops = sorted({str(n.target).replace("aten.", "") for n in gm.graph.nodes if n.op == "call_function"})
+        self.fallbacks.append((key, ops))
+        print(f"[rbln] {key}: host fallback (ops: {', '.join(ops)})", flush=True)
+        return gm
+
+    def describe(self):
+        return {"backend": self.name, "device": f"rbln{self.dev}", "sdk": self.sdk,
+                "host_fallback_parts": len(self.fallbacks)}
+
+
 def visible_chip(nth=0):
     """쓸 RNGD 의 furiosa-torch 번호.
 
@@ -297,4 +404,6 @@ def make(spec, nth=0, **kw):
         return CUDABackend(int(idx or 0))
     if kind == "cpu":
         return CPUBackend()
-    raise ValueError(f"unknown backend {spec!r} (furiosa:N, cuda:N, cpu)")
+    if kind in ("rbln", "atom"):
+        return RBLNBackend(int(idx or 0), cache_dir=kw.get("cache_dir"))
+    raise ValueError(f"unknown backend {spec!r} (furiosa:N, rbln:N, cuda:N, cpu)")
