@@ -41,11 +41,17 @@ def hf_name(k):
     return n.replace(".@", ".") if ".@" in n else n + ".weight"
 
 
+#: the attention half of a layer, for MoE configs (their MLP runs on the host: see `trainer.HostMLP`)
+ATTN_WEIGHTS = ("ln1", "wq", "wk", "wv", "wo")
+#: model_type -> attention block family of MoE checkpoints whose MLP half runs on the host
+MOE_FAMILIES = {"qwen3_moe": "qwen3", "qwen2_moe": "qwen2", "mixtral": "mistral"}
+
+
 def layer_weights(c):
     """the per-layer tensors this config's layers take, in graph-input order"""
     extra = (("bq", "bk", "bv") if c.qkv_bias else ()) + (("qn", "kn") if c.qk_norm else ()) \
         + (("ln3", "ln4") if c.gemma else ())
-    return LAYER_WEIGHTS + extra
+    return (ATTN_WEIGHTS if c.moe else LAYER_WEIGHTS) + extra
 
 
 @dataclass(frozen=True)
@@ -70,6 +76,8 @@ class LlamaConfig:
     rope_local_theta: float = 10000.0
     rope_linear: float = 1.0       # linear RoPE scaling factor of the full-attention layers (Gemma 3 4B+)
     window: int = 0                # sliding window (the sequence length must fit in it)
+    moe: bool = False              # MoE checkpoint: the compiled layer is attention + residual only; the
+                                   #   post-attention norm and the MoE block run on the host (frozen)
 
     @property
     def hd(self):
@@ -86,9 +94,9 @@ class LlamaConfig:
     @property
     def key(self):
         """compiled-graph cache key part for the block variant (empty for plain Llama: old caches stay valid)"""
-        if self.family == "llama" and not (self.head_dim or self.qkv_bias or self.qk_norm):
+        if self.family == "llama" and not (self.head_dim or self.qkv_bias or self.qk_norm or self.moe):
             return ""
-        return f"-{self.family}-hd{self.hd}-b{int(self.qkv_bias)}-n{int(self.qk_norm)}"
+        return f"-{self.family}-hd{self.hd}-b{int(self.qkv_bias)}-n{int(self.qk_norm)}" + ("-attn" if self.moe else "")
 
     @classmethod
     def _gemma3(cls, c):
@@ -100,9 +108,12 @@ class LlamaConfig:
         family = c.get("model_type", "llama")
         if family == "gemma3_text":
             return cls._gemma3(c)
+        moe = family in MOE_FAMILIES
+        if moe:
+            family = MOE_FAMILIES[family]
         if family not in ("llama", "mistral", "qwen2", "qwen3"):
             raise NotImplementedError(f"model_type {family!r}: npu-lora implements llama, mistral, qwen2, qwen3, "
-                                      "gemma3_text")
+                                      f"gemma3_text and the MoE checkpoints {sorted(MOE_FAMILIES)}")
         if c.get("use_sliding_window") or (family == "mistral" and c.get("sliding_window")):
             raise NotImplementedError("sliding-window attention is not implemented")
         rs = c.get("rope_scaling") or c.get("rope_parameters") or {}
@@ -117,7 +128,8 @@ class LlamaConfig:
                    rope_theta=float(c.get("rope_theta", rs.get("rope_theta", 10000.0))),
                    eps=float(c.get("rms_norm_eps", 1e-5)), rope_scaling=scaling, family=family,
                    head_dim=int(c.get("head_dim") or 0) if family == "qwen3" else 0,
-                   qkv_bias=family == "qwen2" or bool(c.get("attention_bias", False)), qk_norm=family == "qwen3")
+                   qkv_bias=family == "qwen2" or bool(c.get("attention_bias", False)), qk_norm=family == "qwen3",
+                   moe=moe)
 
 
 def _gemma3_from(cls, c):
@@ -213,6 +225,8 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     att = torch.softmax(att, -1).to(h.dtype).view(c.nkv, rep * S, S)
     o = (att @ v).view(c.nh, S, c.hd)                                   # [nh, S, hd]
     o = proj(o.transpose(0, 1).reshape(S, c.q_dim), w["wo"], lora.get("o"), scale)
+    if c.moe:                                    # the MLP half runs on the host (trainer.HostMLP)
+        return h + o
     if c.gemma:                                  # sandwich norms: post-attention, pre/post feed-forward
         h = h + rms(o, w["ln2"], c.eps)
         x = rms(h, w["ln3"], c.eps)

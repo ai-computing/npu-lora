@@ -261,6 +261,63 @@ def test_mistral_equivalence():
     _family_equivalence("mistral", dict(sliding_window=None))
 
 
+def _moe_equivalence(family, extra):
+    """MoE checkpoint: attention through the functional block, norm + MoE block on the host (HF modules).
+    Loss vs the merged model in transformers, and LoRA gradients vs autograd through it: with W' = W + s·B·A,
+    dL/dB = s·(dL/dW')·Aᵀ and dL/dA = s·Bᵀ·(dL/dW'). initializer_range=0.2 makes the MoE block matter: with the
+    block's Jacobian dropped the gradients are off by ~0.9 (relative), with it by ~0.03 (bf16)."""
+    from transformers import AutoConfig, AutoModelForCausalLM
+    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    d = tempfile.mkdtemp()
+    cfg = AutoConfig.for_model(family, hidden_size=64, intermediate_size=128, num_attention_heads=4,
+                               num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000,
+                               tie_word_embeddings=False, initializer_range=0.2, **extra)
+    torch.manual_seed(0)
+    AutoModelForCausalLM.from_config(cfg).to(BF).save_pretrained(os.path.join(d, "base"), safe_serialization=True)
+    lc = LoRAConfig(r=4, alpha=8, targets=("q", "v"))
+    tr = LoRATrainer(os.path.join(d, "base"), CPUBackend(), lc, TrainConfig(seq_len=32), log=lambda s: None)
+    assert tr.c.moe
+    tr.setup()
+    g = torch.Generator().manual_seed(1)
+    for per in tr.master:
+        for b in per[1::2]:
+            b.detach().normal_(0, 0.05, generator=g)
+    tr._upload_adapters()
+    ids = torch.randint(0, 1000, (32,), generator=g)
+    lab = torch.roll(ids, -1)
+    lab[-1] = -1
+    loss, grads, _ = tr.forward_backward(ids, lab)
+    export.save_peft(tr, os.path.join(d, "ad"))
+    export.save_merged(os.path.join(d, "base"), os.path.join(d, "ad"), os.path.join(d, "merged"))
+    m = AutoModelForCausalLM.from_pretrained(os.path.join(d, "merged"), dtype=torch.float32)
+    hf = m(ids[None], labels=ids[None]).loss
+    hf.backward()
+    assert abs(loss - hf.item()) / hf.item() < 1e-3, (family, loss, hf.item())
+    names = {"q": "q_proj", "v": "v_proj"}
+    for i, per in enumerate(tr.master):
+        for j, t in enumerate(lc.targets):
+            A, B = per[2 * j].detach(), per[2 * j + 1].detach()
+            gw = getattr(m.model.layers[i].self_attn, names[t]).weight.grad
+            ref_a, ref_b = lc.scale * B.t() @ gw, lc.scale * gw @ A.t()
+            for got, ref, what in ((grads[i][2 * j], ref_a, "A"), (grads[i][2 * j + 1], ref_b, "B")):
+                rel = float((got - ref).norm() / (ref.norm() + 1e-12))
+                assert rel < 0.1, (family, i, t, what, rel)
+
+
+def test_qwen3_moe_equivalence():      # softmax top-k router, normalized top-k weights
+    _moe_equivalence("qwen3_moe", dict(head_dim=32, moe_intermediate_size=32, num_experts=8, num_experts_per_tok=2,
+                                       norm_topk_prob=True, use_sliding_window=False))
+
+
+def test_qwen2_moe_equivalence():      # q/k/v biases, shared expert with a sigmoid gate
+    _moe_equivalence("qwen2_moe", dict(moe_intermediate_size=32, shared_expert_intermediate_size=64, num_experts=8,
+                                       num_experts_per_tok=2, use_sliding_window=False))
+
+
+def test_mixtral_equivalence():
+    _moe_equivalence("mixtral", dict(num_local_experts=4, num_experts_per_tok=2, sliding_window=None))
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in sorted(globals().items()):

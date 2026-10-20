@@ -62,6 +62,9 @@ class LoRATrainer:
         self.step_no = 0
         # 그래프 조각 크기(행렬곱 수). furiosa 는 큰 융합 그래프를 컴파일하지 못해 기본 2, 나머지는 통째로.
         self.max_mm = max_mm if max_mm is not None else (2 if backend.name == "furiosa" else 0)
+        if self.c.moe and train.full:
+            raise NotImplementedError("full fine-tuning of MoE checkpoints (experts stay frozen on the host): use LoRA")
+        self.host_mlp = None          # MoE: post-attention norm + MoE block on the host (moe.HostMLP)
         torch.manual_seed(train.seed)
 
     # ------------------------------------------------------------------ 준비
@@ -82,6 +85,11 @@ class LoRATrainer:
             lc, ls = L.rope_tables(c, S, kind=kind)
             self._tabs[kind] = (be.to_device(lc), be.to_device(ls))
         self.dev_rot = be.to_device(L.rotate_half_matrix(c.hd))
+        if c.moe:
+            from .moe import HostMLP
+            self.host_mlp = HostMLP(self.path)
+            self.log(json.dumps({"event": "host_mlp", "layers": len(self.host_mlp.blocks),
+                                 "seconds": round(time.time() - t0, 1)}))
         self.dev_W = []
         for i in range(c.n_layers):
             w = self.W.layer(i, c)
@@ -226,13 +234,20 @@ class LoRATrainer:
         n_tok = int((labels >= 0).sum())
         mask = be.to_device(L.causal_mask(len(ids), doc_ids))
         h = be.to_device(self.embed[ids])
-        hs = [h]
+        hs, mids = [h], []
+        mlp = self.host_mlp
         for i in range(c.n_layers):
             h = self.g_fwd(h, *self.dev_W[i], *self.dev_AD[i], *self._cs(i), mask, self.dev_rot)
+            if mlp is not None:                       # MoE: attention on the device, MLP half on the host
+                a = be.to_host(h).to(BF)
+                mids.append(a)
+                h = be.to_device(mlp.forward(i, a))
             hs.append(h)
         loss, g = self._head(hs[-1], labels, n_tok)
         grads = [None] * c.n_layers
         for i in reversed(range(c.n_layers)):
+            if mlp is not None:
+                g = be.to_device(mlp.backward(i, mids[i], be.to_host(g)).to(BF))
             out = self.g_bwd(hs[i], *self.dev_W[i], *self.dev_AD[i], *self._cs(i), mask,
                              self.dev_rot, g)
             g, grads[i] = out[0], out[1:]
