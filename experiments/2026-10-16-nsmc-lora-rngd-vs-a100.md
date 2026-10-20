@@ -22,8 +22,8 @@ RNGD에서 학습한 LoRA가 같은 조건의 GPU 학습과 같은 품질(일반
 # RNGD
 lmd-top --plan train --vendor furiosa --model meta-llama/Llama-3.1-8B-Instruct \
   --set data=/mnt/store/datasets/quality/nsmc_train.jsonl --set name=nsmc-rngd --set steps=400 --set accum=4 \
-  --set seq_len=128 --set lr=2e-4 --set node=npu-node-1 --set hf_host_path=/home/user/.cache/huggingface \
-  --set cache_host_path=/home/user/.cache/npu-lora --mode admin --apply
+  --set seq_len=128 --set lr=2e-4 --set node=npu-node-1 --set hf_host_path=/home/<user>/.cache/huggingface \
+  --set cache_host_path=/home/<user>/.cache/npu-lora --mode admin --apply
 # A100 (pod on e11 GPU1)
 python3 -m npu_lora.cli train --model meta-llama/Llama-3.1-8B-Instruct --data .../nsmc_train.jsonl --backend cuda:0 \
   --seq-len 128 --steps 400 --accum 4 --lr 2e-4 --rank 16 --alpha 32 --targets q,v --run-name nsmc-cuda --out ...
