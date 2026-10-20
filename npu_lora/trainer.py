@@ -62,8 +62,6 @@ class LoRATrainer:
         self.step_no = 0
         # 그래프 조각 크기(행렬곱 수). furiosa 는 큰 융합 그래프를 컴파일하지 못해 기본 2, 나머지는 통째로.
         self.max_mm = max_mm if max_mm is not None else (2 if backend.name == "furiosa" else 0)
-        if self.c.moe and train.full:
-            raise NotImplementedError("full fine-tuning of MoE checkpoints (experts stay frozen on the host): use LoRA")
         self.host_mlp = None          # MoE: post-attention norm + MoE block on the host (moe.HostMLP)
         torch.manual_seed(train.seed)
 
@@ -87,7 +85,9 @@ class LoRATrainer:
         self.dev_rot = be.to_device(L.rotate_half_matrix(c.hd))
         if c.moe:
             from .moe import HostMLP
-            self.host_mlp = HostMLP(self.path)
+            tc = self.tc
+            self.host_mlp = HostMLP(self.path, trainable=tc.full, lr=tc.lr, betas=tc.betas,
+                                    weight_decay=tc.weight_decay)
             self.log(json.dumps({"event": "host_mlp", "layers": len(self.host_mlp.blocks),
                                  "seconds": round(time.time() - t0, 1)}))
         self.dev_W = []
@@ -361,6 +361,7 @@ class LoRATrainer:
         ev, box = threading.Event(), [1.0, 0.0]
         jobs = [None] * c.n_layers
         losses, toks, t_wait = [], 0, 0.0
+        mlp = self.host_mlp                             # MoE: norm + MoE block on the host, trained there
         if not hasattr(self, "_last_times"):
             self._last_times = [(0.0, 0.0, 0.0)] * c.n_layers
         for mi, (ids, labels, doc_ids) in enumerate(batch):
@@ -368,15 +369,21 @@ class LoRATrainer:
             n_tok = int((labels >= 0).sum())
             mask = be.to_device(L.causal_mask(len(ids), doc_ids))
             h = be.to_device(self.embed[ids])
-            hs = [h]
+            hs, mids = [h], []
             for i in range(c.n_layers):
                 tw = time.time()
                 w = self._layer_w(i)
                 t_wait += time.time() - tw
                 h = self.g_fwd(h, *w, *self._cs(i), mask, self.dev_rot)
+                if mlp is not None:
+                    a = be.to_host(h).to(BF)
+                    mids.append(a)
+                    h = be.to_device(mlp.forward(i, a))
                 hs.append(h)
             loss, g = self._head(hs[-1], labels, n_tok)
             for i in reversed(range(c.n_layers)):
+                if mlp is not None:
+                    g = be.to_device(mlp.backward(i, mids[i], be.to_host(g)).to(BF))
                 tabs = (*self._cs(i), mask, self.dev_rot)
                 if acc[i] is None:
                     out = self.g_bwd(hs[i], *self.dev_W[i], *tabs, g)
@@ -392,11 +399,15 @@ class LoRATrainer:
         t_bwd = time.time()
         total = sum(float(be.to_host(x).float().sum()) if x.dim() >= 2 and x.shape[-1] == 1
                     else float(be.to_host(x).float().pow(2).sum()) for per in sq for x in per) / (k * k)
+        if mlp is not None:
+            total += mlp.sq_norm() / (k * k)
         gnorm = math.sqrt(total)
         clip = min(1.0, self.tc.grad_clip / (gnorm + 1e-6)) if self.tc.grad_clip else 1.0
         self.step_no += 1
         lr = self._lr()
         box[0], box[1] = clip, lr
+        if mlp is not None:
+            mlp.step(clip, lr, k)
         ev.set()                                    # 기다리던 레이어 작업들이 갱신·올리기를 시작한다
         for i in range(c.n_layers):
             self._ready[i] = jobs[i]                # 다음 step 의 순전파가 레이어별로 기다린다
