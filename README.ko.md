@@ -63,7 +63,7 @@ vLLM <code>--enable-lora</code>와 llm-d가 바로 읽는 PEFT 어댑터나 HF �
 | | |
 | --- | --- |
 | **하드웨어** | FuriosaAI RNGD (furiosa-torch 2026.2) · NVIDIA GPU (비교용) · CPU (비교용) |
-| **모델** | Llama 2/3/3.1/3.2 구조 (GQA, llama3 scaling 포함 RoPE, SwiGLU) · Qwen2는 RNGD에서 A100과 같은 품질로 학습되지만 `npu-lora check`는 실패한다 ([기록](experiments/2026-10-21-qwen25-1.5b-lora.md)) |
+| **모델** | Llama 2/3/3.1/3.2 구조 (GQA, llama3 scaling 포함 RoPE, SwiGLU) · Qwen2(q/k bias)는 RNGD에서 `npu-lora check`를 통과하고 loss 곡선이 A100과 같다 ([기록](experiments/2026-10-21-qwen2-grad-precision.md)) |
 | **모드** | LoRA (q/k/v/o) · CPU 오프로드를 쓰는 디코더 레이어 전체 파인튜닝 |
 | **산출물** | PEFT 어댑터 (`adapter_model.safetensors`) · HF 전체 모델 · 병합 모델 |
 | **연동** | vLLM 런타임 LoRA 로딩 · llm-d · 쿠버네티스 Job · [lmd-top](https://github.com/ai-computing/lmd-top) `--plan train` · Prometheus 지표 |

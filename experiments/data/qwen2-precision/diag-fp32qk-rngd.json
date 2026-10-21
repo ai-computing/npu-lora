@@ -1,0 +1,562 @@
+{
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "layers": 2,
+ "seq": 128,
+ "loss": {
+  "npu": 18.21198272705078,
+  "cpu_bf16": 18.202125549316406,
+  "fp32": 18.198715209960938
+ },
+ "grad_rel": {
+  "npu_vs_cpu_bf16": [
+   [
+    0.4071,
+    0.3758,
+    0.0543,
+    0.0679
+   ],
+   [
+    0.1122,
+    0.1026,
+    0.0537,
+    0.0541
+   ]
+  ],
+  "npu_vs_fp32": [
+   [
+    0.4047,
+    0.3732,
+    0.0532,
+    0.0673
+   ],
+   [
+    0.1109,
+    0.1004,
+    0.0533,
+    0.0526
+   ]
+  ],
+  "cpu_bf16_vs_fp32": [
+   [
+    0.0159,
+    0.0159,
+    0.0102,
+    0.0103
+   ],
+   [
+    0.0157,
+    0.0171,
+    0.008,
+    0.0089
+   ]
+  ]
+ },
+ "head": {
+  "ce_min_npu": -0.020885467529296875,
+  "ce_min_cpu": 0.021381378173828125,
+  "neg_rows_npu": 1,
+  "neg_rows_cpu": 0,
+  "ce_mean_npu": 1.7171695232391357,
+  "ce_mean_cpu": 1.7156081199645996,
+  "t_absdiff_max": 0.07921791076660156,
+  "lse_absdiff_max": 0.03502082824707031,
+  "m_absdiff_max": 0.059868812561035156,
+  "t_minus_rowmax_npu_max": 0.042377471923828125
+ },
+ "parts": {
+  "fwd": [
+   {
+    "part": 0,
+    "n_out": 3,
+    "errs": [
+     0.0035671077203005552,
+     0.0022906605154275894,
+     0.002807152457535267
+    ],
+    "ops": "_to_copy.default pow.Tensor_Scalar mean.dim add.Tensor rsqrt.default mul.Tensor _to_copy.default mul.Tensor t.default mm.default t.default mm.default"
+   },
+   {
+    "part": 1,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "unsqueeze.default"
+   },
+   {
+    "part": 2,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "unsqueeze.default"
+   },
+   {
+    "part": 3,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default mm.default mul.Tensor add.Tensor"
+   },
+   {
+    "part": 4,
+    "n_out": 1,
+    "errs": [
+     2.9877568522351794e-05
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 5,
+    "n_out": 1,
+    "errs": [
+     1.6372996469726786e-05
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 6,
+    "n_out": 1,
+    "errs": [
+     2.3635079742234666e-06
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 7,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default mm.default mul.Tensor add.Tensor add.Tensor"
+   },
+   {
+    "part": 8,
+    "n_out": 4,
+    "errs": [
+     0.0016864970093593001,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ops": "_to_copy.default _to_copy.default add.Tensor _to_copy.default _to_copy.default view.default mul.Tensor view.default mm.default"
+   },
+   {
+    "part": 9,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "_to_copy.default _to_copy.default add.Tensor view.default"
+   },
+   {
+    "part": 10,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "_to_copy.default"
+   },
+   {
+    "part": 11,
+    "n_out": 1,
+    "errs": [
+     0.0006086069042794406
+    ],
+    "ops": "_unsafe_view.default mul.Tensor add.Tensor transpose.int mul.Tensor view.default mm.default _unsafe_view.default mul.Tensor add.Tensor transpose.int clone.default _unsafe_view.default transpose.int expand.default view.default expand.default view.default bmm.default"
+   },
+   {
+    "part": 12,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "view.default transpose.int clone.default"
+   },
+   {
+    "part": 13,
+    "n_out": 1,
+    "errs": [
+     2.3283491827896796e-05
+    ],
+    "ops": "_unsafe_view.default view.default mul.Tensor add.Tensor _softmax.default _to_copy.default view.default expand.default view.default expand.default view.default bmm.default _unsafe_view.default view.default transpose.int clone.default _unsafe_view.default t.default mm.default"
+   },
+   {
+    "part": 14,
+    "n_out": 3,
+    "errs": [
+     0.003536391770467162,
+     0.0030570474918931723,
+     0.0
+    ],
+    "ops": "add.Tensor _to_copy.default pow.Tensor_Scalar mean.dim add.Tensor rsqrt.default mul.Tensor _to_copy.default mul.Tensor t.default mm.default silu.default t.default mm.default"
+   },
+   {
+    "part": 15,
+    "n_out": 1,
+    "errs": [
+     1.8064072719425894e-05
+    ],
+    "ops": "mul.Tensor t.default mm.default add.Tensor"
+   }
+  ],
+  "bwd": [
+   {
+    "part": 0,
+    "n_out": 7,
+    "errs": [
+     0.0035671077203005552,
+     0.0022906605154275894,
+     0.002807152457535267,
+     0.0,
+     0.0,
+     0.0,
+     5.253251345038734e-08
+    ],
+    "ops": "_to_copy.default pow.Tensor_Scalar mean.dim add.Tensor rsqrt.default mul.Tensor _to_copy.default mul.Tensor t.default mm.default t.default mm.default clone.default clone.default"
+   },
+   {
+    "part": 1,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "unsqueeze.default"
+   },
+   {
+    "part": 2,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "unsqueeze.default"
+   },
+   {
+    "part": 3,
+    "n_out": 2,
+    "errs": [
+     0.0,
+     0.0
+    ],
+    "ops": "t.default mm.default mul.Tensor add.Tensor clone.default"
+   },
+   {
+    "part": 4,
+    "n_out": 2,
+    "errs": [
+     2.9877568522351794e-05,
+     0.0
+    ],
+    "ops": "t.default mm.default clone.default"
+   },
+   {
+    "part": 5,
+    "n_out": 2,
+    "errs": [
+     1.6372996469726786e-05,
+     0.0
+    ],
+    "ops": "t.default mm.default clone.default"
+   },
+   {
+    "part": 6,
+    "n_out": 2,
+    "errs": [
+     2.3635079742234666e-06,
+     0.0
+    ],
+    "ops": "t.default mm.default clone.default"
+   },
+   {
+    "part": 7,
+    "n_out": 2,
+    "errs": [
+     0.0,
+     0.0
+    ],
+    "ops": "t.default mm.default mul.Tensor add.Tensor add.Tensor clone.default"
+   },
+   {
+    "part": 8,
+    "n_out": 4,
+    "errs": [
+     0.0016864970093593001,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ops": "_to_copy.default _to_copy.default add.Tensor _to_copy.default _to_copy.default view.default mul.Tensor view.default mm.default"
+   },
+   {
+    "part": 9,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "_to_copy.default _to_copy.default add.Tensor view.default"
+   },
+   {
+    "part": 10,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "_to_copy.default"
+   },
+   {
+    "part": 11,
+    "n_out": 3,
+    "errs": [
+     0.0006086076027713716,
+     0.0,
+     2.1912837837589905e-05
+    ],
+    "ops": "_unsafe_view.default mul.Tensor add.Tensor transpose.int mul.Tensor view.default mm.default _unsafe_view.default mul.Tensor add.Tensor transpose.int clone.default _unsafe_view.default transpose.int expand.default view.default expand.default view.default bmm.default clone.default"
+   },
+   {
+    "part": 12,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "view.default transpose.int clone.default"
+   },
+   {
+    "part": 13,
+    "n_out": 5,
+    "errs": [
+     1.755776975187473e-05,
+     0.0,
+     2.0259807165246002e-09,
+     0.0,
+     7.176990379775816e-08
+    ],
+    "ops": "_unsafe_view.default view.default mul.Tensor add.Tensor _softmax.default _to_copy.default view.default expand.default view.default expand.default view.default bmm.default _unsafe_view.default view.default transpose.int clone.default _unsafe_view.default t.default mm.default clone.default clone.default"
+   },
+   {
+    "part": 14,
+    "n_out": 8,
+    "errs": [
+     0.0035364669747650623,
+     0.0030570223461836576,
+     0.0,
+     0.0,
+     0.0027196588926017284,
+     0.0,
+     0.0,
+     1.0757609913980559e-07
+    ],
+    "ops": "add.Tensor _to_copy.default pow.Tensor_Scalar mean.dim add.Tensor rsqrt.default mul.Tensor _to_copy.default mul.Tensor t.default mm.default silu.default t.default mm.default clone.default clone.default"
+   },
+   {
+    "part": 15,
+    "n_out": 1,
+    "errs": [
+     2.5081430067075416e-05
+    ],
+    "ops": "mul.Tensor t.default mm.default add.Tensor t.default mm.default"
+   },
+   {
+    "part": 16,
+    "n_out": 1,
+    "errs": [
+     4.6470497181871906e-05
+    ],
+    "ops": "mul.Tensor t.default mm.default"
+   },
+   {
+    "part": 17,
+    "n_out": 1,
+    "errs": [
+     0.002735296729952097
+    ],
+    "ops": "mul.Tensor sigmoid.default neg.default add.Scalar mul.Tensor add.Scalar mul.Tensor mul.Tensor t.default mm.default"
+   },
+   {
+    "part": 18,
+    "n_out": 3,
+    "errs": [
+     1.294104276894359e-05,
+     0.00011326449748594314,
+     0.0
+    ],
+    "ops": "add.Tensor mul.Tensor _to_copy.default mul.Tensor mul.Tensor sum.dim_IntList pow.Tensor_Scalar mul.Scalar mul.Tensor div.Scalar pow.Tensor_Scalar mul.Scalar mul.Tensor add.Tensor _to_copy.default add.Tensor t.default mm.default view.default transpose.int clone.default _unsafe_view.default view.default transpose.int bmm.default"
+   },
+   {
+    "part": 19,
+    "n_out": 2,
+    "errs": [
+     0.002660962752997875,
+     0.0028438519220799208
+    ],
+    "ops": "transpose.int bmm.default view.default view.default _to_copy.default mul.Tensor mean.dim mul.Scalar sub.Tensor mul.Tensor mul.Tensor view.default view.default transpose.int bmm.default"
+   },
+   {
+    "part": 20,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "view.default"
+   },
+   {
+    "part": 21,
+    "n_out": 1,
+    "errs": [
+     0.13873142004013062
+    ],
+    "ops": "transpose.int bmm.default view.default view.default"
+   },
+   {
+    "part": 22,
+    "n_out": 2,
+    "errs": [
+     0.0015207455726340413,
+     0.0
+    ],
+    "ops": "view.default transpose.int transpose.int mul.Tensor clone.default _unsafe_view.default t.default mm.default clone.default"
+   },
+   {
+    "part": 23,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "transpose.int clone.default _unsafe_view.default"
+   },
+   {
+    "part": 24,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "view.default mul.Tensor add.Tensor view.default _to_copy.default"
+   },
+   {
+    "part": 25,
+    "n_out": 1,
+    "errs": [
+     0.0015013006050139666
+    ],
+    "ops": "transpose.int mul.Tensor clone.default _unsafe_view.default t.default mm.default view.default mul.Tensor add.Tensor view.default _to_copy.default"
+   },
+   {
+    "part": 26,
+    "n_out": 2,
+    "errs": [
+     0.0,
+     0.0
+    ],
+    "ops": "mul.Tensor t.default mm.default"
+   },
+   {
+    "part": 27,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default t.default"
+   },
+   {
+    "part": 28,
+    "n_out": 2,
+    "errs": [
+     0.0,
+     0.0
+    ],
+    "ops": "t.default mm.default t.default mm.default"
+   },
+   {
+    "part": 29,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default t.default"
+   },
+   {
+    "part": 30,
+    "n_out": 1,
+    "errs": [
+     2.4691001243581923e-08
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 31,
+    "n_out": 1,
+    "errs": [
+     1.135596539825201e-05
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 32,
+    "n_out": 1,
+    "errs": [
+     6.047825081623159e-06
+    ],
+    "ops": "add.Tensor t.default mm.default add.Tensor"
+   },
+   {
+    "part": 33,
+    "n_out": 2,
+    "errs": [
+     5.958760311841615e-07,
+     0.0
+    ],
+    "ops": "mul.Tensor t.default mm.default"
+   },
+   {
+    "part": 34,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default t.default"
+   },
+   {
+    "part": 35,
+    "n_out": 2,
+    "errs": [
+     1.651271122682374e-05,
+     0.0
+    ],
+    "ops": "t.default mm.default t.default mm.default"
+   },
+   {
+    "part": 36,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default t.default"
+   },
+   {
+    "part": 37,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "t.default mm.default add.Tensor"
+   },
+   {
+    "part": 38,
+    "n_out": 1,
+    "errs": [
+     1.4236105016607326e-05
+    ],
+    "ops": "t.default mm.default"
+   },
+   {
+    "part": 39,
+    "n_out": 1,
+    "errs": [
+     0.0
+    ],
+    "ops": "add.Tensor mul.Tensor _to_copy.default mul.Tensor mul.Tensor sum.dim_IntList pow.Tensor_Scalar mul.Scalar mul.Tensor div.Scalar pow.Tensor_Scalar mul.Scalar mul.Tensor add.Tensor _to_copy.default add.Tensor"
+   }
+  ]
+ }
+}
