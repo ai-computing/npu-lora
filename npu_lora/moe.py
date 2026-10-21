@@ -140,7 +140,11 @@ class RoutingPins:
             self.ids.setdefault(i, ids.detach().clone())          # the forward pass (backward recomputes it)
         elif self.mode == "pin" and i in self.ids:
             ids = self.ids[i]
-            val = probs.gather(-1, ids)
+            # transformers 5.1 returns the softmax here, later releases return the raw logits
+            p = probs.float()
+            if (p < 0).any() or not torch.allclose(p.sum(-1), torch.ones_like(p[..., 0]), atol=1e-3):
+                p = torch.softmax(p, dim=-1)
+            val = p.gather(-1, ids)
             if getattr(router, "norm_topk_prob", True):
                 val = val / val.sum(dim=-1, keepdim=True)
             scores = val.to(scores.dtype)
