@@ -497,19 +497,6 @@ def test_moe_hot_experts_on_device_match_host():
         assert rel(a[n], b[n]) < 5e-2, (n, rel(a[n], b[n]))
 
 
-if __name__ == "__main__":
-    failed = 0
-    for name, fn in sorted(globals().items()):
-        if name.startswith("test_") and callable(fn):
-            try:
-                fn()
-                print("ok  ", name)
-            except Exception as e:  # noqa: BLE001
-                failed += 1
-                print("FAIL", name, repr(e)[:200])
-    sys.exit(1 if failed else 0)
-
-
 def test_routing_pins_record_and_force_experts():
     """npu-lora check on MoE: the reference run can be pinned to another run's experts (moe.RoutingPins)"""
     from npu_lora.moe import HostMLP, RoutingPins
@@ -536,3 +523,15 @@ def test_routing_pins_record_and_force_experts():
     flipped = RoutingPins(mlp.blocks)
     flipped.ids = other.ids
     assert rec.flips(flipped)[0] > 0
+
+if __name__ == "__main__":
+    failed = 0
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            try:
+                fn()
+                print("ok  ", name)
+            except Exception as e:  # noqa: BLE001
+                failed += 1
+                print("FAIL", name, repr(e)[:200])
+    sys.exit(1 if failed else 0)
