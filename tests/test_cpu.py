@@ -229,6 +229,18 @@ def test_passes_keep_values_and_parts_match_whole():
         assert _rel(a, r) < 1e-3 and _rel(b, r) < 1e-3
 
 
+def test_fold_neg_add_keeps_silu_backward():
+    # the SiLU backward after scalarize_constants has neg + add.Scalar (1 - sigmoid): RBLN gets rsub instead
+    x, g = torch.randn(8, 16), torch.randn(8, 16)
+    fn = lambda x_, g_: torch.func.vjp(torch.nn.functional.silu, x_)[1](g_)[0]
+    gm = G.build(fn, [x, g])
+    ref = gm(x, g)
+    assert G.fold_neg_add(gm) >= 1
+    ops = {str(n.target) for n in gm.graph.nodes if n.op == "call_function"}
+    assert "aten.neg.default" not in ops and "aten.rsub.Scalar" in ops
+    assert torch.allclose(gm(x, g), ref, atol=1e-6)
+
+
 def test_duplicate_sample_tensor_is_not_merged():
     f = lambda x, a, b: x * a + b
     x, one = torch.randn(4, 4), torch.ones(4, 4)

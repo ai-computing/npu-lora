@@ -151,6 +151,36 @@ def decompose_softmax_backward(gm):
     return n
 
 
+def fold_neg_add(gm):
+    """add(neg(x), c) with a scalar c -> rsub(x, c), the same value c - x.
+
+    scalarize_constants writes `1 - sigmoid(x)` (the SiLU backward) as neg + add.Scalar. rebel-compiler 0.11
+    rejects that pair in any graph (RBLNCompileError DEVICE_GRAPH_CONVERSION; bf16 and fp32, any shape) and
+    segfaults when a matmul follows it in the same part. rsub.Scalar compiles. Applied by the RBLN backend only.
+    """
+    aten = torch.ops.aten
+    n = 0
+    for node in list(gm.graph.nodes):
+        if node.op != "call_function" or node.target not in (aten.add.Scalar, aten.add.Tensor):
+            continue
+        x, c = node.args[0], node.args[1]
+        if not (isinstance(c, (int, float)) and isinstance(x, torch.fx.Node) and x.op == "call_function"
+                and x.target == aten.neg.default and len(node.args) == 2 and not node.kwargs):
+            continue
+        with gm.graph.inserting_before(node):
+            new = gm.graph.call_function(aten.rsub.Scalar, (x.args[0], c))
+        new.meta = dict(node.meta)
+        node.replace_all_uses_with(new)
+        gm.graph.erase_node(node)
+        if not x.users:
+            gm.graph.erase_node(x)
+        n += 1
+    if n:
+        gm.graph.lint()
+        gm.recompile()
+    return n
+
+
 PASSES = (drop_broadcast_expands, scalarize_constants, strip_device_kwargs, decompose_softmax_backward)
 
 

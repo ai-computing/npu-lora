@@ -268,21 +268,24 @@ class RBLNBackend(Backend):
         self.host_fallback = host_fallback
         self.fallbacks = []            # (key, op names) of graph parts the compiler rejected (run on the host)
 
-    def _path(self, key, sample):
+    def _path(self, key, sample, code=""):
         sig = "|".join(f"{tuple(t.shape)}:{t.dtype}" for t in sample if isinstance(t, torch.Tensor))
         d = os.path.join(self.cache_dir, self.sdk)
         os.makedirs(d, exist_ok=True)
-        return os.path.join(d, hashlib.blake2b(f"{key}|{sig}".encode(), digest_size=12).hexdigest() + ".rbln")
+        # the graph text after the backend's own rewrites: a changed rewrite must not reuse an old .rbln/.host
+        return os.path.join(d, hashlib.blake2b(f"{key}|{sig}|{code}".encode(), digest_size=12).hexdigest() + ".rbln")
 
     def compile(self, key, gm, sample):
+        import copy
+        from . import graph as G
         t0 = time.time()
+        gm = copy.deepcopy(gm)
+        G.fold_neg_add(gm)              # rebel-compiler 0.11 rejects neg + add.Scalar (the SiLU backward)
         # the RBLN compiler drops graph inputs a part does not use, so its runtime takes fewer arguments than
         # the part: compile without them and pass only the used ones
         phs = [n for n in gm.graph.nodes if n.op == "placeholder"]
         used = [i for i, n in enumerate(phs) if n.users]
         if len(used) < len(phs):
-            import copy
-            gm = copy.deepcopy(gm)
             for n in [n for n in gm.graph.nodes if n.op == "placeholder" and not n.users]:
                 gm.graph.erase_node(n)
             gm.recompile()
@@ -292,7 +295,7 @@ class RBLNBackend(Backend):
         return self._compile_used(key, gm, sample, t0)
 
     def _compile_used(self, key, gm, sample, t0):
-        path = self._path(key, sample)
+        path = self._path(key, sample, gm.code)
         if os.path.exists(path + ".host"):
             return self._host(key, gm)
         if os.path.exists(path):
