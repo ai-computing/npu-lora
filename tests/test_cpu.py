@@ -240,8 +240,9 @@ def test_vocab_chunked_ce_matches_full():
     n = int((labels >= 0).sum())
     chunks = [(lm[j * vc:(j + 1) * vc], torch.zeros(1, vc), torch.arange(j * vc, (j + 1) * vc, dtype=torch.float32).view(1, -1))
               for j in range(V // vc)]
-    stats = [L.ce_chunk_stats(x, *c, lab) for c in chunks]
-    lse, t = L.ce_combine(stats)
+    stats = [L.ce_chunk_stats(x, *c[:2]) for c in chunks]
+    lse = L.ce_combine(stats)
+    t = L.target_logits(x, lm, labels)
     w = (labels >= 0).float().view(-1, 1) / n
     loss = float(((lse - t) * w).sum())
     gx = torch.zeros(S, H)

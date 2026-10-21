@@ -214,8 +214,8 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     if c.qkv_bias:
         # Qwen2's q/k biases are large next to x @ w (|q|, |k| reach the hundreds), so bf16 q + bq and q . k
         # keep only ~2-3 significant digits of the attention logits: on the CPU alone the bf16 LoRA gradients
-        # were 54% (q) / 21% (v) off an fp32 reference, and RNGD vs CPU differed by as much (#33). q and k from
-        # the bias add through RoPE and q . k^T stay fp32 (1.6% / 1%); the projections themselves remain bf16.
+        # were 54% (q) / 21% (v) off an fp32 reference, and RNGD vs CPU differed by as much (#33). q and k stay
+        # fp32 from the bias add through RoPE and q . k^T (CPU: 1.7%); the projections themselves remain bf16.
         q, k, v = q.float() + w["bq"].float(), k.float() + w["bk"].float(), v + w["bv"]
         cs, sn, rot = cs.float(), sn.float(), rot.float()
     q, k = q.view(S, c.nh, c.hd), k.view(S, c.nkv, c.hd)
@@ -224,6 +224,12 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     q = rope_mm(q, cs, sn, rot).transpose(0, 1)
     k = rope_mm(k, cs, sn, rot).transpose(0, 1)
     v = v.view(S, c.nkv, c.hd).transpose(0, 1)
+    if c.qkv_bias:
+        # softmax(q_i . (k_j - kbar)) == softmax(q_i . k_j): q_i . kbar is the same for every key of row i. RNGD's
+        # matmuls read bf16 inputs even when the graph says fp32, and the backward dq_i = sum_j dS_ij k_j cancels
+        # (sum_j dS_ij = 0) around the large bias part of k: 14% error in that one part, 40% on the q LoRA
+        # gradients. Centering k over the positions removes most of that part before any matmul sees it.
+        k = k - k.mean(1, keepdim=True)
     qg = q.reshape(c.nkv, rep * S, c.hd)                                 # [nkv, rep*S, hd]
     att_scale = c.attn_scale or 1.0 / math.sqrt(c.hd)          # (`scale` is the LoRA scale)
     att = (qg @ k.transpose(-1, -2)).float().view(c.nkv, rep, S, S) * att_scale + mask
@@ -263,23 +269,30 @@ def head_loss(c, h, norm, lm, iota, labels, inv_n):
 # 어휘를 Vc 조각으로 나눠 조각마다 [S, Vc] 만 만들고, 조각 사이에는 행마다 숫자 몇 개만 오간다.
 
 def chunk_logits(x, lm_j, bias_j):
-    """fp32 logits of chunk j. With a bf16 matmul, RNGD gave the target logit t up to 0.06 above the row max m
-    of the same graph (t and m read differently rounded logits), so lse - t went negative on confident tokens
-    (#33: 11 of 400 steps reported a negative loss). In fp32 the three statistics read the same values."""
+    """fp32 logits of chunk j. In a bf16 matmul RNGD rounds the logits to bf16 (0.12 nat at |logit| ~ 30), and the
+    rounding shifts lse and the target logit by different amounts: confident tokens got lse - t < 0 (#33: 11 of
+    400 steps reported a negative loss). With fp32 logits RNGD's m and lse are within 1e-5 of float64."""
     return x.float() @ lm_j.float().t() + bias_j
 
 
-def ce_chunk_stats(x, lm_j, bias_j, iota_j, labels):
-    """조각 j 의 (행 최댓값 m, exp 합 s, 정답 logit t). x = rms(h) [S,H], lm_j [Vc,H].
+def ce_chunk_stats(x, lm_j, bias_j):
+    """조각 j 의 (행 최댓값 m, exp 합 s). x = rms(h) [S,H], lm_j [Vc,H].
 
     bias_j[1,Vc] 는 보통 0, 어휘를 Vc 배수로 맞추려 덧붙인 가짜 토큰 자리에는 -1e9.
-    정답이 이 조각에 없으면 t = 0 (iota_j 에 그 id 가 없으니 one-hot 이 비어 있다).
+    정답 logit 은 여기서 내지 않는다: RNGD 는 (logits * one-hot).sum 을 fp32 logits 로 써도 bf16 로 반올림한
+    값으로 계산해(최대 0.12 차) lse 와 어긋났다 — host 에서 `target_logits` 로 구한다.
     """
     logits = chunk_logits(x, lm_j, bias_j)
     m = logits.amax(-1, keepdim=True)
     s = torch.exp(logits - m).sum(-1, keepdim=True)
-    t = (logits * (iota_j == labels).float()).sum(-1, keepdim=True)
-    return m, s, t
+    return m, s
+
+
+def target_logits(x, lm, labels):
+    """정답 logit [S,1] fp32: x [S,H] (rms(h), host bf16), lm [V,H] (host), labels [S] (음수는 무시 — 0 을 쓴다).
+    S 개의 내적이라 host 에서 바로 한다(S=128, H=4096 에서 0.5 M 곱)."""
+    rows = lm[labels.clamp(min=0)]
+    return (x.float() * rows.float()).sum(-1, keepdim=True)
 
 
 def ce_chunk_grad(x, lm_j, bias_j, iota_j, labels, lse, w, acc):
@@ -295,13 +308,11 @@ def ce_chunk_grad(x, lm_j, bias_j, iota_j, labels, lse, w, acc):
 
 
 def ce_combine(stats):
-    """[(m, s, t)] (조각별, 각 [S,1]) → (lse[S,1], target_logit[S,1])"""
+    """[(m, s)] (조각별, 각 [S,1]) → lse[S,1]"""
     m = torch.cat([x[0] for x in stats], -1)
     s = torch.cat([x[1] for x in stats], -1)
     M = m.amax(-1, keepdim=True)
-    lse = M + torch.log((s * torch.exp(m - M)).sum(-1, keepdim=True))
-    t = torch.cat([x[2] for x in stats], -1).sum(-1, keepdim=True)
-    return lse, t
+    return M + torch.log((s * torch.exp(m - M)).sum(-1, keepdim=True))
 
 
 def vocab_chunks(V, target=4096):

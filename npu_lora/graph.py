@@ -472,7 +472,7 @@ def head_rms_bwd_fn(c):
 
 
 def ce_stats_fn():
-    """(x, lm_j, bias_j, iota_j, labels) -> (m, s, t)"""
+    """(x, lm_j, bias_j) -> (m, s)"""
     return L.ce_chunk_stats
 
 
