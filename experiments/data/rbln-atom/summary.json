@@ -1,0 +1,465 @@
+{
+ "check_flow_runs": {
+  "all-atom-s1": {
+   "host_parts": "none",
+   "seed": 1,
+   "loss_rel_err_vs_cpu": 0.001761,
+   "grad_worst_rel_err_vs_cpu": 0.13356,
+   "grad_min_cos_vs_cpu": 0.991144,
+   "atom_worst_vs_fp32": 0.0475,
+   "cpu_worst_vs_fp32": 0.0908,
+   "loss_fp32": 21.030664737068477
+  },
+  "all-atom-s2": {
+   "host_parts": "none",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.000607,
+   "grad_worst_rel_err_vs_cpu": 0.10115,
+   "grad_min_cos_vs_cpu": 0.995727,
+   "atom_worst_vs_fp32": 0.08948,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "all-atom-s3": {
+   "host_parts": "none",
+   "seed": 3,
+   "loss_rel_err_vs_cpu": 0.001601,
+   "grad_worst_rel_err_vs_cpu": 0.02212,
+   "grad_min_cos_vs_cpu": 0.999758,
+   "atom_worst_vs_fp32": 0.02436,
+   "cpu_worst_vs_fp32": 0.01687,
+   "loss_fp32": 21.591558534303196
+  },
+  "all-atom-s4": {
+   "host_parts": "none",
+   "seed": 4,
+   "loss_rel_err_vs_cpu": 0.001733,
+   "grad_worst_rel_err_vs_cpu": 0.03114,
+   "grad_min_cos_vs_cpu": 0.999575,
+   "atom_worst_vs_fp32": 0.02366,
+   "cpu_worst_vs_fp32": 0.01921,
+   "loss_fp32": 20.755263975558115
+  },
+  "host-fwd-s1": {
+   "host_parts": "fwd",
+   "seed": 1,
+   "loss_rel_err_vs_cpu": 0.001837,
+   "grad_worst_rel_err_vs_cpu": 0.01391,
+   "grad_min_cos_vs_cpu": 0.999907,
+   "atom_worst_vs_fp32": 0.09321,
+   "cpu_worst_vs_fp32": 0.0908,
+   "loss_fp32": 21.030664737068477
+  },
+  "host-fwd-s2": {
+   "host_parts": "fwd",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.001797,
+   "grad_worst_rel_err_vs_cpu": 0.04867,
+   "grad_min_cos_vs_cpu": 0.998827,
+   "atom_worst_vs_fp32": 0.0506,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "host-fwd-s3": {
+   "host_parts": "fwd",
+   "seed": 3,
+   "loss_rel_err_vs_cpu": 0.001791,
+   "grad_worst_rel_err_vs_cpu": 0.01707,
+   "grad_min_cos_vs_cpu": 0.999858,
+   "atom_worst_vs_fp32": 0.0218,
+   "cpu_worst_vs_fp32": 0.01687,
+   "loss_fp32": 21.591558534303196
+  },
+  "host-fwd-s4": {
+   "host_parts": "fwd",
+   "seed": 4,
+   "loss_rel_err_vs_cpu": 0.001643,
+   "grad_worst_rel_err_vs_cpu": 0.02688,
+   "grad_min_cos_vs_cpu": 0.999641,
+   "atom_worst_vs_fp32": 0.03988,
+   "cpu_worst_vs_fp32": 0.01921,
+   "loss_fp32": 20.755263975558115
+  },
+  "host-fwd-qkv-proj-s2": {
+   "host_parts": "fwd parts 0,3-8 (rms1, q/k/v projections + LoRA, q RoPE)",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.000265,
+   "grad_worst_rel_err_vs_cpu": 0.04536,
+   "grad_min_cos_vs_cpu": 0.999016,
+   "atom_worst_vs_fp32": 0.032,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "host-fwd-attn-core-s2": {
+   "host_parts": "fwd parts 10,12 (k RoPE, q.k, softmax, att.v, o proj)",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.000192,
+   "grad_worst_rel_err_vs_cpu": 0.08154,
+   "grad_min_cos_vs_cpu": 0.99703,
+   "atom_worst_vs_fp32": 0.0618,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "host-fwd-mlp-s2": {
+   "host_parts": "fwd parts 13,14 (residual, rms2, SwiGLU MLP)",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.001266,
+   "grad_worst_rel_err_vs_cpu": 0.07713,
+   "grad_min_cos_vs_cpu": 0.997618,
+   "atom_worst_vs_fp32": 0.0683,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "host-ce-grad-s1": {
+   "host_parts": "ce-grad",
+   "seed": 1,
+   "loss_rel_err_vs_cpu": 0.001761,
+   "grad_worst_rel_err_vs_cpu": 0.14537,
+   "grad_min_cos_vs_cpu": 0.990232
+  },
+  "host-head-s1": {
+   "host_parts": "rms, ce-stats, ce-grad",
+   "seed": 1,
+   "loss_rel_err_vs_cpu": 9.6e-05,
+   "grad_worst_rel_err_vs_cpu": 0.13438,
+   "grad_min_cos_vs_cpu": 0.990968
+  },
+  "host-fwd-ce-grad-s1": {
+   "host_parts": "fwd, ce-grad",
+   "seed": 1,
+   "loss_rel_err_vs_cpu": 0.001837,
+   "grad_worst_rel_err_vs_cpu": 0.04045,
+   "grad_min_cos_vs_cpu": 0.999734,
+   "atom_worst_vs_fp32": 0.0942,
+   "cpu_worst_vs_fp32": 0.0908,
+   "loss_fp32": 21.030664737068477
+  },
+  "host-fwd-ce-grad-s2": {
+   "host_parts": "fwd, ce-grad",
+   "seed": 2,
+   "loss_rel_err_vs_cpu": 0.001797,
+   "grad_worst_rel_err_vs_cpu": 0.05922,
+   "grad_min_cos_vs_cpu": 0.998755,
+   "atom_worst_vs_fp32": 0.05345,
+   "cpu_worst_vs_fp32": 0.02952,
+   "loss_fp32": 21.233387728444296
+  },
+  "host-fwd-ce-grad-s3": {
+   "host_parts": "fwd, ce-grad",
+   "seed": 3,
+   "loss_rel_err_vs_cpu": 0.001791,
+   "grad_worst_rel_err_vs_cpu": 0.0392,
+   "grad_min_cos_vs_cpu": 0.999741,
+   "atom_worst_vs_fp32": 0.03462,
+   "cpu_worst_vs_fp32": 0.01687,
+   "loss_fp32": 21.591558534303196
+  },
+  "host-fwd-ce-grad-s4": {
+   "host_parts": "fwd, ce-grad",
+   "seed": 4,
+   "loss_rel_err_vs_cpu": 0.001643,
+   "grad_worst_rel_err_vs_cpu": 0.04787,
+   "grad_min_cos_vs_cpu": 0.99948,
+   "atom_worst_vs_fp32": 0.05907,
+   "cpu_worst_vs_fp32": 0.01921,
+   "loss_fp32": 20.755263975558115
+  }
+ },
+ "parts_all_atom_seed1": {
+  "fwd-p0of15": {
+   "calls": 2,
+   "max_rel_err": 0.00409,
+   "ops": "_to_copy.default add.Tensor mean.dim mm.default mul.Tensor pow.Tensor_Scalar rsqrt.default t.default"
+  },
+  "fwd-p1of15": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "unsqueeze.default"
+  },
+  "fwd-p2of15": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "unsqueeze.default"
+  },
+  "fwd-p3of15": {
+   "calls": 2,
+   "max_rel_err": 0.00197,
+   "ops": "add.Tensor mm.default mul.Tensor t.default"
+  },
+  "fwd-p4of15": {
+   "calls": 2,
+   "max_rel_err": 0.00363,
+   "ops": "mm.default t.default"
+  },
+  "fwd-p5of15": {
+   "calls": 2,
+   "max_rel_err": 0.004,
+   "ops": "mm.default t.default"
+  },
+  "fwd-p6of15": {
+   "calls": 2,
+   "max_rel_err": 0.00354,
+   "ops": "mm.default t.default"
+  },
+  "fwd-p7of15": {
+   "calls": 2,
+   "max_rel_err": 0.00212,
+   "ops": "add.Tensor mm.default mul.Tensor t.default"
+  },
+  "fwd-p8of15": {
+   "calls": 2,
+   "max_rel_err": 0.0011,
+   "ops": "mm.default mul.Tensor view.default"
+  },
+  "fwd-p9of15": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "view.default"
+  },
+  "fwd-p10of15": {
+   "calls": 2,
+   "max_rel_err": 0.00336,
+   "ops": "_unsafe_view.default add.Tensor bmm.default clone.default expand.default mm.default mul.Tensor transpose.int view.default"
+  },
+  "fwd-p11of15": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "clone.default transpose.int view.default"
+  },
+  "fwd-p12of15": {
+   "calls": 2,
+   "max_rel_err": 0.00589,
+   "ops": "_softmax.default _to_copy.default _unsafe_view.default add.Tensor bmm.default clone.default expand.default mm.default mul.Tensor t.default transpose.int view.default"
+  },
+  "fwd-p13of15": {
+   "calls": 2,
+   "max_rel_err": 0.00466,
+   "ops": "_to_copy.default add.Tensor mean.dim mm.default mul.Tensor pow.Tensor_Scalar rsqrt.default silu.default t.default"
+  },
+  "fwd-p14of15": {
+   "calls": 2,
+   "max_rel_err": 0.00451,
+   "ops": "add.Tensor mm.default mul.Tensor t.default"
+  },
+  "rms-p0of1": {
+   "calls": 1,
+   "max_rel_err": 0.00292,
+   "ops": "_to_copy.default add.Tensor mean.dim mul.Tensor pow.Tensor_Scalar rsqrt.default"
+  },
+  "ce-stats-p0of1": {
+   "calls": 32,
+   "max_rel_err": 0.00823,
+   "ops": "_to_copy.default add.Tensor amax.default exp.default mm.default sub.Tensor sum.dim_IntList t.default"
+  },
+  "ce-grad-p0of2": {
+   "calls": 32,
+   "max_rel_err": 0.0429,
+   "ops": "_to_copy.default add.Tensor eq.Tensor exp.default mm.default mul.Tensor sub.Tensor t.default"
+  },
+  "ce-grad-p1of2": {
+   "calls": 32,
+   "max_rel_err": 0.00027,
+   "ops": "_to_copy.default add.Tensor"
+  },
+  "rms-bwd-p0of1": {
+   "calls": 1,
+   "max_rel_err": 0.00413,
+   "ops": "_to_copy.default add.Tensor div.Scalar mean.dim mul.Scalar mul.Tensor pow.Tensor_Scalar rsqrt.default sum.dim_IntList"
+  },
+  "bwd-p0of39": {
+   "calls": 2,
+   "max_rel_err": 0.00398,
+   "ops": "_to_copy.default add.Tensor clone.default mean.dim mm.default mul.Tensor pow.Tensor_Scalar rsqrt.default t.default"
+  },
+  "bwd-p1of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "unsqueeze.default"
+  },
+  "bwd-p2of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "unsqueeze.default"
+  },
+  "bwd-p3of39": {
+   "calls": 2,
+   "max_rel_err": 0.00197,
+   "ops": "add.Tensor clone.default mm.default mul.Tensor t.default"
+  },
+  "bwd-p4of39": {
+   "calls": 2,
+   "max_rel_err": 0.00304,
+   "ops": "clone.default mm.default t.default"
+  },
+  "bwd-p5of39": {
+   "calls": 2,
+   "max_rel_err": 0.00353,
+   "ops": "clone.default mm.default t.default"
+  },
+  "bwd-p6of39": {
+   "calls": 2,
+   "max_rel_err": 0.00348,
+   "ops": "clone.default mm.default t.default"
+  },
+  "bwd-p7of39": {
+   "calls": 2,
+   "max_rel_err": 0.00209,
+   "ops": "add.Tensor clone.default mm.default mul.Tensor t.default"
+  },
+  "bwd-p8of39": {
+   "calls": 2,
+   "max_rel_err": 0.0011,
+   "ops": "mm.default mul.Tensor view.default"
+  },
+  "bwd-p9of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "view.default"
+  },
+  "bwd-p10of39": {
+   "calls": 2,
+   "max_rel_err": 0.00268,
+   "ops": "_unsafe_view.default add.Tensor bmm.default clone.default expand.default mm.default mul.Tensor transpose.int view.default"
+  },
+  "bwd-p11of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "clone.default transpose.int view.default"
+  },
+  "bwd-p12of39": {
+   "calls": 2,
+   "max_rel_err": 0.00572,
+   "ops": "_softmax.default _to_copy.default _unsafe_view.default add.Tensor bmm.default clone.default expand.default mm.default mul.Tensor t.default transpose.int view.default"
+  },
+  "bwd-p13of39": {
+   "calls": 2,
+   "max_rel_err": 0.00445,
+   "ops": "_to_copy.default add.Tensor clone.default mean.dim mm.default mul.Tensor pow.Tensor_Scalar rsqrt.default silu.default t.default"
+  },
+  "bwd-p14of39": {
+   "calls": 2,
+   "max_rel_err": 0.00388,
+   "ops": "add.Tensor mm.default mul.Tensor t.default"
+  },
+  "bwd-p15of39": {
+   "calls": 2,
+   "max_rel_err": 0.00524,
+   "ops": "mm.default mul.Tensor t.default"
+  },
+  "bwd-p16of39": {
+   "calls": 2,
+   "max_rel_err": 0.00698,
+   "ops": "add.Scalar mm.default mul.Tensor neg.default sigmoid.default t.default"
+  },
+  "bwd-p17of39": {
+   "calls": 2,
+   "max_rel_err": 0.00553,
+   "ops": "_to_copy.default _unsafe_view.default add.Tensor bmm.default clone.default div.Scalar mm.default mul.Scalar mul.Tensor pow.Tensor_Scalar sum.dim_IntList t.default transpose.int view.default"
+  },
+  "bwd-p18of39": {
+   "calls": 2,
+   "max_rel_err": 0.00743,
+   "ops": "_to_copy.default bmm.default mean.dim mul.Scalar mul.Tensor sub.Tensor transpose.int view.default"
+  },
+  "bwd-p19of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "view.default"
+  },
+  "bwd-p20of39": {
+   "calls": 2,
+   "max_rel_err": 0.00296,
+   "ops": "bmm.default transpose.int view.default"
+  },
+  "bwd-p21of39": {
+   "calls": 2,
+   "max_rel_err": 0.00187,
+   "ops": "_unsafe_view.default clone.default mm.default mul.Tensor t.default transpose.int view.default"
+  },
+  "bwd-p22of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "_unsafe_view.default clone.default transpose.int"
+  },
+  "bwd-p23of39": {
+   "calls": 2,
+   "max_rel_err": 0.00253,
+   "ops": "add.Tensor mul.Tensor view.default"
+  },
+  "bwd-p24of39": {
+   "calls": 2,
+   "max_rel_err": 0.00228,
+   "ops": "_unsafe_view.default add.Tensor clone.default mm.default mul.Tensor t.default transpose.int view.default"
+  },
+  "bwd-p25of39": {
+   "calls": 2,
+   "max_rel_err": 0.00251,
+   "ops": "mm.default mul.Tensor t.default"
+  },
+  "bwd-p26of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "t.default"
+  },
+  "bwd-p27of39": {
+   "calls": 2,
+   "max_rel_err": 0.0032,
+   "ops": "mm.default t.default"
+  },
+  "bwd-p28of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "t.default"
+  },
+  "bwd-p29of39": {
+   "calls": 2,
+   "max_rel_err": 0.00275,
+   "ops": "mm.default t.default"
+  },
+  "bwd-p30of39": {
+   "calls": 2,
+   "max_rel_err": 0.00341,
+   "ops": "mm.default t.default"
+  },
+  "bwd-p31of39": {
+   "calls": 2,
+   "max_rel_err": 0.00344,
+   "ops": "add.Tensor mm.default t.default"
+  },
+  "bwd-p32of39": {
+   "calls": 2,
+   "max_rel_err": 0.00268,
+   "ops": "mm.default mul.Tensor t.default"
+  },
+  "bwd-p33of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "t.default"
+  },
+  "bwd-p34of39": {
+   "calls": 2,
+   "max_rel_err": 0.00387,
+   "ops": "mm.default t.default"
+  },
+  "bwd-p35of39": {
+   "calls": 2,
+   "max_rel_err": 0.0,
+   "ops": "t.default"
+  },
+  "bwd-p36of39": {
+   "calls": 2,
+   "max_rel_err": 0.00186,
+   "ops": "add.Tensor mm.default t.default"
+  },
+  "bwd-p37of39": {
+   "calls": 2,
+   "max_rel_err": 0.00376,
+   "ops": "mm.default t.default"
+  },
+  "bwd-p38of39": {
+   "calls": 2,
+   "max_rel_err": 0.00366,
+   "ops": "_to_copy.default add.Tensor div.Scalar mul.Scalar mul.Tensor pow.Tensor_Scalar sum.dim_IntList"
+  }
+ }
+}

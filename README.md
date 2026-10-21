@@ -218,7 +218,8 @@ Frequently used training options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--backend` | `furiosa:0` | `furiosa:N`, `furiosa:auto` (card assigned by Kubernetes), `cuda:N`, `cpu` |
+| `--backend` | `furiosa:0` | `furiosa:N`, `furiosa:auto` (card assigned by Kubernetes), `rbln:N` (Rebellions ATOM), `cuda:N`, `cpu` |
+| `--host-parts` | `fwd` (rbln) | rbln: graph-part groups run on the host (`fwd`, `bwd`, `rms`, `ce-stats`, `ce-grad`, `rms-bwd`; `none` = all on ATOM) |
 | `--seq-len` | 512 | Sequence length; fixed at compile time (a new length means a new compile) |
 | `--rank`, `--alpha`, `--targets` | 16, 32, `q,v` | LoRA settings (`q,k,v,o`) |
 | `--accum` | 1 | Gradient accumulation (micro-batch = one packed sequence) |
@@ -366,7 +367,9 @@ generates.
 - One packed sequence per micro-batch; use `--accum` for larger batches.
 - First compilation is slow (hours for an 8B model) and is per sequence length.
 - furiosa-torch opens devices only from privileged containers.
-- Rebellions ATOM is not supported yet; the same approach applies (`rebel.compile_from_torch`).
+- Rebellions ATOM (`--backend rbln:N`, rebel-compiler 0.11): functional, not tuned. The layer forward runs on the
+  host by default because ATOM's rounding makes the forward activations drift (`check` 13 % off the CPU with every
+  part on ATOM, 1.4 % with the forward on the host); see `experiments/2026-10-22-rbln-atom-check.md`.
 
 ## 📚 Documentation
 
