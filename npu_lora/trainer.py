@@ -484,6 +484,7 @@ class LoRATrainer:
                 d = dev[i]
                 if i and d != dev[i - 1]:              # hidden state to the next device (S x H bf16)
                     h = bes[d].to_device(bes[dev[i - 1]].to_host(h))
+                    hs[-1] = h                         # layer i's backward reads its input on its own device
                 tw = time.time()
                 w = self._layer_w(i)
                 t_wait += time.time() - tw
