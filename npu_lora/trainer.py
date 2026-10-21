@@ -316,6 +316,29 @@ class LoRATrainer:
         grads = [[be.to_host(x).float() for x in gl] for gl in grads]
         return loss, grads, n_tok
 
+    def reference_grads(self, ids, labels):
+        """(loss, LoRA grads) by fp32 autograd on the host, with the same bf16 weights, tables and bf16-rounded
+        adapters the graphs use: a reference for `check` that does not round every op to bf16. Dense LoRA only
+        (None otherwise)."""
+        c = self.c
+        if self.tc.full or c.moe:
+            return None
+        D, S = torch.float32, len(ids)
+        mask, rot = L.causal_mask(S).to(D), L.rotate_half_matrix(c.hd).to(D)
+        ad = [[p.detach().to(BF).to(D).requires_grad_(True) for p in per] for per in self.master]
+        h = self.embed[ids].to(D)
+        for i in range(c.n_layers):
+            cos, sin = L.rope_tables(c, S, kind=c.layer_types[i]) if c.layer_types else L.rope_tables(c, S)
+            w = {k: v.to(D) for k, v in self.W.layer(i, c).items()}
+            lo = {t: (ad[i][2 * j], ad[i][2 * j + 1]) for j, t in enumerate(self.lora.targets)}
+            h = L.layer(c, h, w, lo, self.lora.scale, cos.to(D), sin.to(D), mask, rot)
+        x = L.rms(h, self.W.norm(c).to(D), c.eps)
+        loss = torch.nn.functional.cross_entropy(x @ self.lm_host.to(D).t(), labels, ignore_index=-1)
+        flat = [p for per in ad for p in per]
+        gs = torch.autograd.grad(loss, flat)
+        n = len(ad[0])
+        return float(loss.detach()), [[g.float() for g in gs[i * n:(i + 1) * n]] for i in range(len(ad))]
+
     def _head(self, h, labels, n_tok):
         """다음 토큰 cross-entropy 를 어휘 조각으로: (loss, hidden 기울기[장치])."""
         be = self.be_head
@@ -339,10 +362,13 @@ class LoRATrainer:
     def train_step(self, batch):
         """batch: [(ids, labels, doc_ids)] × accum. 반환: 지표 dict"""
         host0 = self.host_mlp.seconds if self.host_mlp is not None else 0.0
+        parts0 = dict(getattr(self.be, "seconds", None) or {})      # RBLN: graph-part time by where it ran
         out = self._train_step_full(batch) if self.tc.full else self._train_step_lora(batch)
         if self.host_mlp is not None:      # MoE: where the step went (host MoE blocks vs device graphs + transfers)
             out["host_moe_s"] = round(self.host_mlp.seconds - host0, 3)
             out["device_and_transfer_s"] = round(out["seconds"] - out["host_moe_s"], 3)
+        for k, v in parts0.items():
+            out[f"parts_{k}_s"] = round(self.be.seconds[k] - v, 3)
         return out
 
     def _train_step_lora(self, batch):

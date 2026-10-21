@@ -241,6 +241,22 @@ def test_fold_neg_add_keeps_silu_backward():
     assert torch.allclose(gm(x, g), ref, atol=1e-6)
 
 
+def test_rbln_host_parts_place_groups_on_the_host(monkeypatch):
+    import types
+    from npu_lora.backends import RBLNBackend
+    monkeypatch.setitem(sys.modules, "rebel", types.SimpleNamespace(__version__="test"))
+    assert RBLNBackend.group("llama-v2-H64-S32-r4-qv-s2.0-fwd-p3of15-ab12cd") == "fwd"
+    assert RBLNBackend.group("llama-v3-H64-S32-Vc1000-rms-bwd-p0of1-ab12cd") == "rms-bwd"
+    assert RBLNBackend.group("sqnorm-64x64") is None
+    be = RBLNBackend(0, cache_dir=tempfile.mkdtemp())          # default: the layer forward on the host
+    assert be.host_parts == ("fwd",)
+    gm = G.build(lambda x: x * 2 + 1, [torch.randn(4, 4)])
+    fn = be.compile("k-fwd-p0of1-abc", gm, [torch.randn(4, 4)])  # placed on the host: no compiler call
+    x = torch.randn(4, 4)
+    assert torch.equal(fn(x), x * 2 + 1) and be.placed == ["k-fwd-p0of1-abc"] and be.seconds["host"] > 0
+    assert RBLNBackend(0, cache_dir=tempfile.mkdtemp(), host_parts=()).host_parts == ()
+
+
 def test_duplicate_sample_tensor_is_not_merged():
     f = lambda x, a, b: x * a + b
     x, one = torch.randn(4, 4), torch.ones(4, 4)
@@ -328,6 +344,9 @@ def test_hf_equivalence():
         hf = m(ids[None], labels=ids[None]).loss.item()
     assert abs(loss - hf) / hf < 1e-3, (loss, hf)
     assert all(math.isfinite(float(x.norm())) for gl in grads for x in gl)
+    ref_loss, ref = tr.reference_grads(ids, lab)          # the fp64 reference `check` uses
+    assert abs(ref_loss - hf) / hf < 1e-3, (ref_loss, hf)
+    assert all(_rel(x, r) < 5e-2 for gl, rl in zip(grads, ref) for x, r in zip(gl, rl))
 
 
 def _family_equivalence(family, extra):
