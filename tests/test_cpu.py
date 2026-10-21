@@ -484,6 +484,27 @@ def test_moe_full_finetuning():
     assert abs(now - hf_now) / hf_now < 2e-2, (now, hf_now)
 
 
+def test_host_mlp_keep_graph_equals_recompute():
+    """HostMLP.keep_graph reuses the forward's autograd graph in backward: same input gradients (LoRA) and the
+    same host-part parameter gradients (full fine-tuning) as recomputing the forward."""
+    from npu_lora import moe as M
+    d = tempfile.mkdtemp()
+    _tiny_moe(d)
+    g = torch.Generator().manual_seed(2)
+    a = (torch.randn(32, 64, generator=g)).to(BF)
+    gy = (torch.randn(32, 64, generator=g) * 0.1).to(BF)
+    for trainable in (False, True):
+        out = []
+        for keep in (False, True):
+            h = M.HostMLP(d, trainable=trainable, keep_graph=keep)
+            y = h.forward(0, a)
+            gx = h.backward(0, a, gy)
+            out.append((y, gx, [x.clone() for x in h.acc[0]] if trainable else []))
+        (y0, g0, p0), (y1, g1, p1) = out
+        assert torch.equal(y0, y1) and torch.equal(g0, g1)
+        assert all(torch.equal(u, v) for u, v in zip(p0, p1))
+
+
 def test_hot_expert_packing():
     """pack(): rows grouped by hot expert, each at slot * nb + rank; nb = bucket of the busiest expert; the batched
     expert graph equals the per-expert host computation on the packed rows"""
@@ -541,9 +562,9 @@ def test_moe_hot_experts_on_device_match_host():
     host._upload_adapters(), hyb._upload_adapters()
     _, gh, _ = host.forward_backward(ids, lab)
     _, gd, _ = hyb.forward_backward(ids, lab)
-    # batched, per layer (2 layers): forward, the forward that HostMLP.backward recomputes, backward — not one
-    # call per hot expert
-    assert hyb.moe_stats()["device_calls"] == 6, hyb.moe_stats()
+    # batched, per layer (2 layers): forward and backward (HostMLP keeps the forward's graph, no recompute) —
+    # not one call per hot expert
+    assert hyb.moe_stats()["device_calls"] == 4, hyb.moe_stats()
     for a, b in zip((x for gl in gd for x in gl), (x for gl in gh for x in gl)):
         assert rel(a, b) < 5e-2, rel(a, b)                     # bf16: host autograd vs compiled vjp
     # full fine-tuning: host-part gradients at the first step
