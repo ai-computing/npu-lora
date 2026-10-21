@@ -81,7 +81,8 @@ RNGD와 A100에서 같은 데이터·시드·하이퍼파라미터(Llama-3.1-8B-
 
 - 기울기가 CPU 기준과 일치한다: cosine ≥ 0.9997 (Llama-3.1-8B 레이어 + 128k 어휘 head).
 - RNGD 1장으로 Llama-3.1-8B LoRA를 128토큰 step당 약 0.7 s에 학습한다.
-- 전체 파인튜닝은 Llama-3.2-1B로 검증했다.
+- RNGD 1장(CPU 오프로드)으로 학습한 Llama-3.1-8B 전체 파인튜닝은 같은 A100 학습과 같은 결과다: NSMC 84.6% 대 84.2%,
+  MMLU 52.75% 대 50.25% ([기록](experiments/2026-10-21-full8b-quality.md)). 일반 능력은 LoRA가 더 잘 지킨다(MMLU 63%).
 
 원자료는 [docs/validation.md](docs/validation.md)와 [`experiments/`](experiments)에 있다.
 
@@ -97,9 +98,8 @@ RNGD와 A100에서 같은 데이터·시드·하이퍼파라미터(Llama-3.1-8B-
 2026-10-16 실행보다 4배 느려서(레이어당 그래프 조각 증가) 이 tok/J는 RNGD의 한계가 아니다.
 
 > [!NOTE]
-> **프로토타입.** LoRA 품질은 Llama-3.1-8B로, 전체 파인튜닝은 Llama-3.2-1B로 검증했다. Llama-3.1-8B 전체
-> 파인튜닝은 카드 1장과 CPU 오프로드로 돌지만([step 시간 측정](experiments/2026-10-16-full8b-offload-step.md))
-> 품질 비교는 아직 하지 않았다. 현재 상태와 열린 질문: [STATUS.md](STATUS.md).
+> **프로토타입.** LoRA와 전체 파인튜닝 품질을 Llama-3.1-8B(전체 파인튜닝은 카드 1장 + CPU 오프로드)와
+> Llama-3.2-1B로 검증했다. 현재 상태와 열린 질문: [STATUS.md](STATUS.md).
 
 ## 🚀 빠른 시작
 
