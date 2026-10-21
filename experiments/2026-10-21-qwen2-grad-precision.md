@@ -131,11 +131,15 @@ In npu-train, three changes fix it:
 
 With them `npu-lora check` passes (3.1%), no step reports a negative loss, and the loss curve matches A100.
 
-The head change applies to every model. Llama was not re-checked on RNGD in this run; its layer graphs are unchanged, but its head chunk graphs are recompiled.
+The head change applies to every model. Llama-3.1-8B `npu-lora check --layers 2 --seq-len 128` on RNGD passes both before and after:
+- `main`: loss rel 4.2e-5, worst gradient 2.22% (cos 0.99976);
+- this branch: loss rel 1.8e-5, worst gradient 2.14% (cos 0.99977).
+
+Raw data: `llama8b-check-{main,final}-rngd.json`.
 
 Compiler behaviour worth reporting to the vendor:
 - fp32 matmul inputs are rounded to bf16;
 - `(x·onehot).sum` over fp32 logits uses bf16 values;
 - a fwd part with a positions-mean on a transposed view compiles but times out at run time.
 
-Next: Qwen3 (no q/k bias; its check already passed for Qwen3-0.6B in #32), and a Llama-3.1-8B `check` with the new head.
+Next: Qwen3 (no q/k bias; its check already passed for Qwen3-0.6B in #32).
