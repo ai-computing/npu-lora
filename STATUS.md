@@ -1,12 +1,12 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: active
-- **Updated**: 2026-10-21 21:10+09:00
+- **State**: idle
+- **Updated**: 2026-10-22 01:48+09:00
 - **Agent**: claude@control-node
-- **Task**: #40 resident AdamW DRAM_SHARED OOM
-- **Last result**: cause: furiosa-torch 2026.2 process-global DRAM_SHARED flag raced by layer-worker uploads (not memory); fix: one lock for graph calls + device allocations; 8/8 resident runs 25/25 steps no OOM; 2 RNGD x 8 resident 4.27 s/step (480 tok/s) vs 2-card offload 5.04 s, model -1.1%
-- **Next**: 200-step 2-card resident run (#40 done-when); 1-card resident 4 timing at low host load; report the runtime flag to Furiosa
+- **Task**: #40 resident AdamW DRAM_SHARED OOM (done)
+- **Last result**: 2 RNGD x 8 resident 200/200 steps, no OOM, 4.43 s/step (463 tok/s) steady; 1 card x 4 resident at low load 4.79 s vs 1-card offload 5.11 s, model +3.0%
+- **Next**: report the runtime flag to Furiosa
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -42,12 +42,21 @@
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
 
+### 2026-10-22 01:48+09:00 — #40 resident AdamW DRAM_SHARED OOM ✅
+
+- Result: 2 RNGD x 8 resident 200/200 steps, no OOM, 4.43 s/step (463 tok/s) steady; 1 card x 4 resident at low load 4.79 s vs 1-card offload 5.11 s, model +3.0%
+- Next: report the runtime flag to Furiosa
+- Metrics: tok_s=462.5, step_s=4.43
+- Params: cards=2, resident_layers=8, steps=200, host_load=15-50, sdk=furiosa-torch-2026.2.0
+- Experiments: experiments/2026-10-22-resident-200-steps.md
+- By: claude@control-node · exp/40-resident-200-steps@b3cb03b-dirty
+
 ### 2026-10-21 22:27+09:00 — #35 MoE hot experts batched ✅
 
 - Result: hot+keep_graph 5.19 s/step vs host-only+keep 8.00 (paired median -2.66 s, 6/6 rounds) and vs main host-only 9.21 s; Qwen3-30B-A3B S128 RNGD
 - Metrics: step_time_s=5.19
 - Experiments: experiments/2026-10-21-moe-batched-hot-experts.md
-- By: claude@DESKTOP-R49IQ68 · perf/35-hot-experts-faster@1fee9f2-dirty
+- By: claude@control-node · perf/35-hot-experts-faster@1fee9f2-dirty
 
 ### 2026-10-21 21:57+09:00 — #35 MoE hot experts batched
 
@@ -55,7 +64,7 @@
 - Next: more rows per call (longer S), hot fraction 0.5, drop the recomputed forward
 - Metrics: step_time_s=13.0
 - Experiments: experiments/2026-10-21-moe-batched-hot-experts.md
-- By: claude@DESKTOP-R49IQ68 · perf/35-batch-hot-experts@9d5e498
+- By: claude@control-node · perf/35-batch-hot-experts@9d5e498
 
 ### 2026-10-21 21:10+09:00 — #40 resident AdamW DRAM_SHARED OOM
 
@@ -72,7 +81,7 @@
 - Next: Llama-3.1-8B check with the new head; Qwen3
 - Metrics: step_time_s=2.74
 - Experiments: experiments/2026-10-21-qwen2-grad-precision.md
-- By: claude@DESKTOP-R49IQ68 · fix/33-qwen-lora-grad@a7e206a
+- By: claude@control-node · fix/33-qwen-lora-grad@a7e206a
 
 ### 2026-10-21 15:37+09:00 — #34 resident device AdamW + host-throughput step model
 

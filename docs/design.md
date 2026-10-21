@@ -94,13 +94,14 @@ T_wait = max(0, N_off · (t_a + t_u) / W  −  T_res  −  N_res,first · t_fwd)
 
 Check on RNGD, Llama-3.1-8B, S=512, accum 4 (host terms from an offload run on the same host at the same load;
 records: [resident AdamW](../experiments/2026-10-21-resident-adamw.md), [two cards](../experiments/2026-10-21-two-card-split.md),
-[DRAM_SHARED race](../experiments/2026-10-21-dram-shared-race.md)):
+[DRAM_SHARED race](../experiments/2026-10-21-dram-shared-race.md), [200 steps](../experiments/2026-10-22-resident-200-steps.md)):
 
 | host, configuration | predicted | measured | error |
 | --- | ---: | ---: | ---: |
 | 96 cores, 1 card, offload, W=8 (per-layer terms of the W=4 run) | 4.53 s | 4.82 s | −6 % |
 | 96 cores, 1 card, 4 resident layers (steps 6–12, uncontended; that run stopped at 12, #40) | 5.10 s | 5.12 s | −0.4 % |
 | 96 cores at load ~100, 1 card, 4 resident layers (steps 6–25; terms of the 1-card offload run right before) | 10.82 s | 9.72 s | +11 % |
+| 96 cores at load < 50, 1 card, 4 resident layers (steps 6–25; terms of the 1-card offload run in the same Job) | 4.94 s | 4.79 s | +3 % |
 | 96 cores, 2 cards, 8 resident layers per card (steps 6–25; terms of the 2-card offload run back to back) | 4.22 s | 4.27 s | −1 % |
 | 24 cores, 2 cards, offload | 8.33 s | 9.26 s | −10 % |
 
@@ -114,7 +115,8 @@ Resident runs used to stop with an intermittent `OutOfMemoryError ... on DRAM_SH
 ([#40](https://github.com/ai-computing/npu-train/issues/40)). The cause was not memory: furiosa-torch 2026.2 keeps the
 device memory type in one process-wide flag that every graph call briefly sets to DRAM_SHARED (0 bytes on a single-chip
 card), so a layer worker's upload at that moment failed. Graph calls and device allocations now share one lock
-(`backends.DEVICE_ALLOC_LOCK`; see [compiler workarounds](compiler-workarounds.md)).
+(`backends.DEVICE_ALLOC_LOCK`; see [compiler workarounds](compiler-workarounds.md)). With it, 2 cards × 8 resident layers
+ran 200 steps without an error at a steady 4.43 s/step.
 
 ## Job layout on Kubernetes
 
