@@ -328,6 +328,26 @@ def test_qwen2_equivalence():          # q/k/v biases
     _family_equivalence("qwen2", dict(use_sliding_window=False))
 
 
+def test_qwen2_large_bias_lora_grads_match_fp32():
+    """Qwen2-sized q/k biases (|k| ~ 100s) must not cost the bf16 layer graph its LoRA gradients (#33):
+    the compiled-graph form of the backward vs fp32 autograd on the same inputs."""
+    c = L.LlamaConfig(H=64, I=128, nh=4, nkv=2, n_layers=1, vocab=1000, family="qwen2", qkv_bias=True)
+    S = 64
+    args, g_out = _layer_inputs(S)
+    args = [*args, g_out]
+    gen = torch.Generator().manual_seed(3)
+    nw = len(L.LAYER_WEIGHTS)
+    # q, k, v biases go after the 9 Llama weights (L.layer_weights order); k's are large like Qwen2.5's
+    bias = [(torch.randn(C.H, generator=gen) * 8).to(BF), (torch.randn(C.kv_dim, generator=gen) * 60).to(BF),
+            (torch.randn(C.kv_dim, generator=gen) * 0.5).to(BF)]
+    args = args[:1 + nw] + bias + args[1 + nw:]
+    bwd = G.layer_bwd_fn(c, ("q", "v"), 2.0)
+    got = G.build(bwd, args)(*args)
+    ref = bwd(*[a.float() for a in args])
+    for i in range(1, 5):                                    # A_q, B_q, A_v, B_v
+        assert _rel(got[i], ref[i]) < 5e-2, (i, _rel(got[i], ref[i]))
+
+
 def test_qwen3_equivalence():          # per-head q/k norm, head_dim with nh * head_dim != hidden
     _family_equivalence("qwen3", dict(head_dim=32, use_sliding_window=False))
 
