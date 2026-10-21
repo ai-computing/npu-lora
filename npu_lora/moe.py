@@ -23,7 +23,8 @@ class HostMLP:
     메모리는 파라미터당 bf16 2 B + master 4 B + AdamW 8 B (+ 누적 4 B) 다.
     """
 
-    def __init__(self, path, dtype=BF, trainable=False, lr=1e-5, betas=(0.9, 0.999), weight_decay=0.0):
+    def __init__(self, path, dtype=BF, trainable=False, lr=1e-5, betas=(0.9, 0.999), weight_decay=0.0,
+                 keep_graph=True):
         from transformers import AutoModelForCausalLM
         model = AutoModelForCausalLM.from_pretrained(path, dtype=dtype)
         self.blocks = []
@@ -35,6 +36,11 @@ class HostMLP:
         del model                      # embeddings, attention and lm_head are freed; the blocks stay
         self.trainable = trainable
         self.seconds = 0.0             # host time in forward/backward (step-time split: host MoE vs the rest)
+        # keep_graph: forward builds the autograd graph and backward reuses it instead of recomputing the forward
+        # (one of the three passes; with hot experts on the device also one device call per layer). Costs the
+        # block's saved activations until that layer's backward (S=128: a few MB per layer).
+        self.keep_graph = keep_graph
+        self._saved = {}               # layer -> (x, y) of the last forward, consumed by its backward
         if trainable:
             self.params = [[p for p in (*norm.parameters(), *mlp.parameters())] for norm, mlp in self.blocks]
             self.master = [[p.detach().float().clone().requires_grad_(True) for p in ps] for ps in self.params]
@@ -59,8 +65,15 @@ class HostMLP:
 
     def forward(self, i, a):
         t0 = time.perf_counter()
-        with torch.no_grad():
-            y = self._f(i, a)
+        if self.keep_graph:
+            x = a.detach().requires_grad_(True)
+            with torch.enable_grad():
+                y = self._f(i, x)
+            self._saved[i] = (x, y)
+            y = y.detach()
+        else:
+            with torch.no_grad():
+                y = self._f(i, a)
         self.seconds += time.perf_counter() - t0
         return y
 
@@ -72,9 +85,14 @@ class HostMLP:
             self.seconds += time.perf_counter() - t0
 
     def _backward(self, i, a, g):
-        x = a.detach().requires_grad_(True)
+        saved = self._saved.pop(i, None)
+        if saved is not None and saved[0].data_ptr() == a.data_ptr() and saved[0].shape == a.shape:
+            x, y = saved                                # the forward's graph (same input tensor)
+        else:
+            x = a.detach().requires_grad_(True)
+            with torch.enable_grad():
+                y = self._f(i, x)
         with torch.enable_grad():
-            y = self._f(i, x)
             if not self.trainable:
                 (gx,) = torch.autograd.grad(y, x, g.to(y.dtype))
                 return gx
