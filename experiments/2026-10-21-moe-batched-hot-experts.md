@@ -78,3 +78,36 @@ Raw data in `experiments/data/moe-batched/`:
   - a larger hot fraction (E=64 graphs, about 29 GB of stacked weights on the card);
   - removing the forward that `HostMLP.backward` recomputes (one of the three calls per layer).
 - The losses of both paths match the CPU equivalence test (`test_moe_hot_experts_on_device_match_host`). Per-step losses on RNGD are not compared here: the head on `main` rounds the target logit (#33, fixed in #43), and several steps report small negative losses on both paths.
+
+## Follow-up: profile, then drop the recomputed forward (`HostMLP.keep_graph`)
+
+**Commit**: `perf/35-hot-experts-faster` `1fee9f2`. Same host, card and recipe as above, S=128, hot fraction 0.25.
+
+**Method** (`moe_prof.py`, raw data `prof-s128-roundrobin.jsonl`):
+- One process. 4 host-only warm-up steps fix the hot set.
+- Then 6 rounds of the four configurations, with the order reversed every other round.
+- Load average 53 during this run, lower than during the A/B runs above (120–150).
+
+| config (step median, 5–6 steps each) | step | attention + head on device | HostMLP fwd | HostMLP bwd | of which: recomputed fwd | cold-expert fwd | hot device fwd / bwd |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| host-only (as `main`) | 9.21 s | 1.26 | 2.48 | 5.34 | 2.48 | 2.46 | — |
+| host-only + keep_graph | 8.00 s | 1.16 | 2.46 | 4.31 | 0 | 1.31 | — |
+| hot (as #38) | 6.70 s | 1.07 | 1.73 | 3.79 | 1.66 | 1.27 | 0.55 / 0.52 |
+| **hot + keep_graph** | **5.19 s** | 1.10 | 1.81 | 2.21 | 0 | 0.64 | 0.42 / 0.59 |
+
+- The cold-expert forward column counts both the forward and the recompute, so it halves when the recompute is dropped.
+- The router takes ≤ 0.05 s per step.
+- `HostMLP.backward` recomputed the whole MoE block forward: about a third of the host MoE time, and one of the three device calls per layer.
+- `keep_graph` keeps the forward's autograd graph until that layer's backward. It is bitwise-equal to recomputing (`test_host_mlp_keep_graph_equals_recompute`) and costs a few MB of activations per layer at S=128.
+
+**Paired per round** (hot + keep_graph minus the host-only step of the same round):
+
+| baseline | per-round differences | median | rounds where hot is faster |
+|---|---|---:|---:|
+| vs host-only + keep_graph | −1.33, −3.13, −3.84, −2.50, −2.81, −1.25 s | **−2.66 s (−33%)** | 6 / 6 |
+| vs host-only as on `main` | −4.71, −5.03, −4.60, −2.58, −3.74, −3.63 s | **−4.17 s (−45%)** | 6 / 6 |
+
+**Conclusion**:
+- With the recompute dropped, hot experts on RNGD are faster than host-only by more than the round-to-round noise at this load: 6 of 6 rounds, median −2.66 s against the equally improved host-only path.
+- Even without `keep_graph`, hot (6.70 s) beat host-only (9.21 s) at load 53. In the A/B above, at load 120–150, they were at parity. The gain depends on how busy the shared host is, because the cold experts and the backward run there.
+- Not tried: E=64 and S=256/512. Both need about 40 min of compile per expert bucket, and S needs new attention graphs too. They were not needed to answer #35.

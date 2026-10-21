@@ -1,12 +1,12 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: active
-- **Updated**: 2026-10-21 21:57+09:00
+- **State**: idle
+- **Updated**: 2026-10-21 22:27+09:00
 - **Agent**: claude@DESKTOP-R49IQ68
-- **Task**: #35 MoE hot experts batched
-- **Last result**: batched hot experts 13.0 s/step vs host-only 13.5 (alternating steps, Qwen3-30B-A3B, RNGD); per-expert main 42.4 vs 17.2
-- **Next**: more rows per call (longer S), hot fraction 0.5, drop the recomputed forward
+- **Task**: #35 MoE hot experts batched (done)
+- **Last result**: hot+keep_graph 5.19 s/step vs host-only+keep 8.00 (paired median -2.66 s, 6/6 rounds) and vs main host-only 9.21 s; Qwen3-30B-A3B S128 RNGD
+- **Next**: -
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -41,6 +41,13 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-21 22:27+09:00 — #35 MoE hot experts batched ✅
+
+- Result: hot+keep_graph 5.19 s/step vs host-only+keep 8.00 (paired median -2.66 s, 6/6 rounds) and vs main host-only 9.21 s; Qwen3-30B-A3B S128 RNGD
+- Metrics: step_time_s=5.19
+- Experiments: experiments/2026-10-21-moe-batched-hot-experts.md
+- By: claude@DESKTOP-R49IQ68 · perf/35-hot-experts-faster@1fee9f2-dirty
 
 ### 2026-10-21 21:57+09:00 — #35 MoE hot experts batched
 
