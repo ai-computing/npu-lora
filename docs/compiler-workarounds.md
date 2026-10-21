@@ -19,6 +19,10 @@
 | 그래프가 조용히 틀린 값을 냄 | 같은 텐서 객체를 두 샘플 자리에 넘기면 make_fx 가 두 입력을 하나로 묶음 | `graph.build` 가 중복 샘플을 복제 |
 | **조각 출력이 조용히 전치됨**(정사각이면 rel 1.41, 직사각이면 모양 뒤바뀜) | 컴파일 결과가 출력을 연속 배치로 가정 — 전치 view·전치 텐서의 원소별 결과가 출력이면 틀림 | `materialize_outputs`: 연속이 아닌 출력 앞에 `clone(contiguous)` |
 | **연쇄 실행에서만 조용히 틀림**(조각 단독은 정확) | 커널이 컴파일 샘플 입력의 메모리 배치(전치 stride)로 굳음 — 실행 때 연속 입력을 받으면 엉뚱하게 읽음 | 컴파일 샘플을 `contiguous()` 로 맞추고, 캐시 키에 입력 stride 포함 |
+| **fp32 그래프인데 bf16 정밀도**(Qwen2 q LoRA 기울기 RNGD 대 fp32 40%) | RNGD 행렬곱은 그래프가 fp32 여도 입력을 bf16 으로 읽음. Qwen2 의 큰 q/k bias 에서 `dq = dS·k` 가 상쇄(Σ_j dS_ij = 0)되며 오차가 커짐 | q/k 는 bias 덧셈부터 q·kᵀ 까지 fp32, `k − mean_j(k_j)`(softmax 불변, detach)로 큰 공통 성분을 행렬곱 전에 제거 (#33) |
+| head 의 정답 logit 이 행 최댓값보다 큼 → 음수 loss | `(logits·onehot).sum` 은 fp32 logits 를 줘도 bf16 로 반올림한 값으로 계산(최대 0.12), max·Σexp 는 fp32 | 조각 그래프는 (max, Σexp)만, 정답 logit 은 host 에서 `target_logits`(S 개 내적) (#33) |
+| `UnsupportedOpError` (ReduceByVe verification) | 위치 축 mean 의 역전파(전치 view 위 reduction) | 정확한 기울기가 0 이라 mean 을 `detach` |
+| 컴파일은 되는데 실행이 `failed to run TP program … TimedOut` | 전치 view 위에서 위치 축 mean + sub + bmm 이 한 조각에 있을 때 | mean 을 전치 전 `[S, nkv, hd]` 에서 |
 | `npu-lora check` 가 엉뚱한 차이 | furiosa 를 불러오면 `torch.manual_seed` 가 장치 쪽에서 경고만 내고 끝나 두 trainer 의 A 초기값이 달라짐 | 어댑터 초기화에 전용 `torch.Generator` |
 
 값이 틀리는 문제는 컴파일 오류가 나지 않는다. `npu_lora.diagnose.compare_parts` 로 조각마다 CPU 와 장치 출력을

@@ -137,6 +137,7 @@ class LoRATrainer:
         c, be = self.c, self.be_head
         n, vc, pad = L.vocab_chunks(c.vocab)
         lm = self.W.lm_head()
+        self.lm_host = lm                     # target logits are computed on the host (llama.target_logits)
         if pad:
             lm = torch.cat([lm, torch.zeros(pad, c.H, dtype=lm.dtype)])
         ids = torch.arange(n * vc, dtype=torch.float32)
@@ -274,7 +275,7 @@ class LoRATrainer:
         lab, col = torch.zeros(S, 1), torch.ones(S, 1)
         hk = f"llama-v3-H{c.H}-S{S}-Vc{vc}"   # v3: lse·w 중복 입력으로 틀리게 컴파일된 캐시를 버린다
         self.g_rms = cp(f"{hk}-rms", G.build(G.head_rms_fn(c), [h, norm]), [h, norm])
-        st_in = [x, lm_j, bias_j, iota_j, lab]
+        st_in = [x, lm_j, bias_j]
         self.g_stats = cp(f"{hk}-ce-stats", G.build(G.ce_stats_fn(), st_in), st_in)
         gr_in = [x, lm_j, bias_j, iota_j, lab, col, col.clone(), torch.zeros(S, c.H)]
         self.g_cegrad = cp(f"{hk}-ce-grad", G.build(G.ce_grad_fn(), gr_in), gr_in)
@@ -321,10 +322,11 @@ class LoRATrainer:
         lab = be.to_device(labels.float().view(-1, 1))
         x = self.g_rms(h, self.dev_norm)
         stats = []
-        for lm_j, bias_j, iota_j in zip(self.dev_lm, self.dev_bias, self.dev_iota):
-            m, s, t = self.g_stats(x, lm_j, bias_j, iota_j, lab)
-            stats.append((be.to_host(m).float(), be.to_host(s).float(), be.to_host(t).float()))
-        lse, tgt = L.ce_combine(stats)
+        for lm_j, bias_j in zip(self.dev_lm, self.dev_bias):
+            m, s = self.g_stats(x, lm_j, bias_j)
+            stats.append((be.to_host(m).float(), be.to_host(s).float()))
+        lse = L.ce_combine(stats)
+        tgt = L.target_logits(be.to_host(x), self.lm_host, labels)
         valid = (labels >= 0).float().view(-1, 1)
         w = valid / max(n_tok, 1)
         loss = float(((lse - tgt) * w).sum())

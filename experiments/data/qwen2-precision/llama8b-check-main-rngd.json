@@ -1,0 +1,59 @@
+{
+ "loss_npu": 13.964370727539062,
+ "loss_cpu": 13.96377944946289,
+ "loss_rel_err": 4.23436991619499e-05,
+ "grad_worst_rel_err": 0.022154802456498146,
+ "npu_seconds": 8.05,
+ "cpu_seconds": 26.99,
+ "grads": [
+  {
+   "layer": 0,
+   "tensor": 0,
+   "rel_err": 0.01945,
+   "cos": 0.999814
+  },
+  {
+   "layer": 0,
+   "tensor": 1,
+   "rel_err": 0.01947,
+   "cos": 0.999812
+  },
+  {
+   "layer": 0,
+   "tensor": 2,
+   "rel_err": 0.01727,
+   "cos": 0.999856
+  },
+  {
+   "layer": 0,
+   "tensor": 3,
+   "rel_err": 0.01691,
+   "cos": 0.999859
+  },
+  {
+   "layer": 1,
+   "tensor": 0,
+   "rel_err": 0.01823,
+   "cos": 0.999831
+  },
+  {
+   "layer": 1,
+   "tensor": 1,
+   "rel_err": 0.02215,
+   "cos": 0.999755
+  },
+  {
+   "layer": 1,
+   "tensor": 2,
+   "rel_err": 0.01315,
+   "cos": 0.999912
+  },
+  {
+   "layer": 1,
+   "tensor": 3,
+   "rel_err": 0.01001,
+   "cos": 0.999952
+  }
+ ],
+ "pass": true
+}
