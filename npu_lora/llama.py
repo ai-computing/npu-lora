@@ -229,7 +229,9 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
         # matmuls read bf16 inputs even when the graph says fp32, and the backward dq_i = sum_j dS_ij k_j cancels
         # (sum_j dS_ij = 0) around the large bias part of k: 14% error in that one part, 40% on the q LoRA
         # gradients. Centering k over the positions removes most of that part before any matmul sees it.
-        k = k - k.mean(1, keepdim=True)
+        # kbar is detached: its exact gradient is zero (sum_j dS_ij = 0), and the furiosa compiler rejects the
+        # reduction over positions that its backward would add (ReduceByVe verification).
+        k = k - k.mean(1, keepdim=True).detach()
     qg = q.reshape(c.nkv, rep * S, c.hd)                                 # [nkv, rep*S, hd]
     att_scale = c.attn_scale or 1.0 / math.sqrt(c.hd)          # (`scale` is the LoRA scale)
     att = (qg @ k.transpose(-1, -2)).float().view(c.nkv, rep, S, S) * att_scale + mask
