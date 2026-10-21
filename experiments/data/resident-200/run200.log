@@ -1,0 +1,8 @@
+01:03:31 gate2: load 0.27 0.44 0.63 k8s-rngd=0
+01:05:20 r200 deleted: ImagePullBackOff furiosaai/furiosa-llm:latest
+01:06:48 image re-pulled on node; restart
+01:07:31 gate2: load 6.21 4.68 2.37 k8s-rngd=0
+01:34:57 r200 status=1 steps=200 oom=0 after: load 16.79 22.34 20.73
+01:35:20 gate1: load 15.20 21.82 20.58 k8s-rngd=0
+01:46:27 t1c status=1 steps=50 oom=0 after: load 9.84 16.45 19.14
+01:46:38 RUN200DONE
