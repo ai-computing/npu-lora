@@ -262,13 +262,20 @@ def head_loss(c, h, norm, lm, iota, labels, inv_n):
 # 그래프를 여러 장치 부분 그래프로 쪼개다 거부한다("multiple internal subgraphs are not supported").
 # 어휘를 Vc 조각으로 나눠 조각마다 [S, Vc] 만 만들고, 조각 사이에는 행마다 숫자 몇 개만 오간다.
 
+def chunk_logits(x, lm_j, bias_j):
+    """fp32 logits of chunk j. With a bf16 matmul, RNGD gave the target logit t up to 0.06 above the row max m
+    of the same graph (t and m read differently rounded logits), so lse - t went negative on confident tokens
+    (#33: 11 of 400 steps reported a negative loss). In fp32 the three statistics read the same values."""
+    return x.float() @ lm_j.float().t() + bias_j
+
+
 def ce_chunk_stats(x, lm_j, bias_j, iota_j, labels):
     """조각 j 의 (행 최댓값 m, exp 합 s, 정답 logit t). x = rms(h) [S,H], lm_j [Vc,H].
 
     bias_j[1,Vc] 는 보통 0, 어휘를 Vc 배수로 맞추려 덧붙인 가짜 토큰 자리에는 -1e9.
     정답이 이 조각에 없으면 t = 0 (iota_j 에 그 id 가 없으니 one-hot 이 비어 있다).
     """
-    logits = (x @ lm_j.t()).float() + bias_j
+    logits = chunk_logits(x, lm_j, bias_j)
     m = logits.amax(-1, keepdim=True)
     s = torch.exp(logits - m).sum(-1, keepdim=True)
     t = (logits * (iota_j == labels).float()).sum(-1, keepdim=True)
@@ -281,7 +288,7 @@ def ce_chunk_grad(x, lm_j, bias_j, iota_j, labels, lse, w, acc):
     lse[S,1] 은 전 어휘 logsumexp(host 가 조각 통계로 계산), w[S,1] 는 행 가중치(유효 토큰 1/n, 그 외 0).
     누적을 그래프 안에서 해서 장치 텐서에 eager 연산을 하지 않는다.
     """
-    logits = (x @ lm_j.t()).float() + bias_j
+    logits = chunk_logits(x, lm_j, bias_j)
     p = torch.exp(logits - lse)
     g = (p - (iota_j == labels).float()) * w
     return acc + (g.to(x.dtype) @ lm_j).float()
