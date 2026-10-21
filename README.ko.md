@@ -85,6 +85,17 @@ RNGD와 A100에서 같은 데이터·시드·하이퍼파라미터(Llama-3.1-8B-
 
 원자료는 [docs/validation.md](docs/validation.md)와 [`experiments/`](experiments)에 있다.
 
+카드 1장의 학습 에너지, 같은 노드·레시피(카드 전력은 Prometheus; [기록](experiments/2026-10-21-energy-rngd-vs-a100.md)):
+
+| Llama-3.1-8B | RNGD tok/s | RNGD tok/J | A100 tok/s | A100 tok/J |
+| --- | ---: | ---: | ---: | ---: |
+| 전체 파인튜닝, S=512, accum 4, CPU 오프로드 | 332 | **4.32** | 492 | 3.08 |
+| LoRA r=16 q·v, S=128 (두 장치 모두 npu-lora) | 49 | 1.05 | 366 | 2.41 |
+| LoRA, A100 에서 일반 PyTorch autograd | — | — | 1,683 | 6.39 |
+
+오프로드 경로의 host 전력까지 넣으면 전체 파인튜닝은 1.92(RNGD) 대 1.55(A100) tok/J다. 지금 `main`의 RNGD LoRA는
+2026-10-16 실행보다 4배 느려서(레이어당 그래프 조각 증가) 이 tok/J는 RNGD의 한계가 아니다.
+
 > [!NOTE]
 > **프로토타입.** LoRA 품질은 Llama-3.1-8B로, 전체 파인튜닝은 Llama-3.2-1B로 검증했다. Llama-3.1-8B 전체
 > 파인튜닝은 카드 1장과 CPU 오프로드로 돌지만([step 시간 측정](experiments/2026-10-16-full8b-offload-step.md))
