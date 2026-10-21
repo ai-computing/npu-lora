@@ -198,7 +198,7 @@ class FuriosaBackend(Backend):
         return t if self.compile_only else t.to(self.dev)
 
     def to_host(self, t, out=None):
-        # 미리 잡아 둔 버퍼로 받으면 19.9 GB/s, t.cpu() 는 매번 새 메모리를 잡느라 3.0 GB/s (e11 RNGD)
+        # 미리 잡아 둔 버퍼로 받으면 19.9 GB/s, t.cpu() 는 매번 새 메모리를 잡느라 3.0 GB/s (RNGD)
         if out is None:
             return t.cpu()
         out.copy_(t)

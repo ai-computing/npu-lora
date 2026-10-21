@@ -63,7 +63,7 @@ vLLM <code>--enable-lora</code>와 llm-d가 바로 읽는 PEFT 어댑터나 HF �
 | | |
 | --- | --- |
 | **하드웨어** | FuriosaAI RNGD (furiosa-torch 2026.2) · NVIDIA GPU (비교용) · CPU (비교용) |
-| **모델** | Llama 2/3/3.1/3.2 구조 (GQA, llama3 scaling 포함 RoPE, SwiGLU) |
+| **모델** | Llama 2/3/3.1/3.2 구조 (GQA, llama3 scaling 포함 RoPE, SwiGLU) · Qwen2는 RNGD에서 A100과 같은 품질로 학습되지만 `npu-lora check`는 실패한다 ([기록](experiments/2026-10-21-qwen25-1.5b-lora.md)) |
 | **모드** | LoRA (q/k/v/o) · CPU 오프로드를 쓰는 디코더 레이어 전체 파인튜닝 |
 | **산출물** | PEFT 어댑터 (`adapter_model.safetensors`) · HF 전체 모델 · 병합 모델 |
 | **연동** | vLLM 런타임 LoRA 로딩 · llm-d · 쿠버네티스 Job · [lmd-top](https://github.com/ai-computing/lmd-top) `--plan train` · Prometheus 지표 |
@@ -81,14 +81,25 @@ RNGD와 A100에서 같은 데이터·시드·하이퍼파라미터(Llama-3.1-8B-
 
 - 기울기가 CPU 기준과 일치한다: cosine ≥ 0.9997 (Llama-3.1-8B 레이어 + 128k 어휘 head).
 - RNGD 1장으로 Llama-3.1-8B LoRA를 128토큰 step당 약 0.7 s에 학습한다.
-- 전체 파인튜닝은 Llama-3.2-1B로 검증했다.
+- RNGD 1장(CPU 오프로드)으로 학습한 Llama-3.1-8B 전체 파인튜닝은 같은 A100 학습과 같은 결과다: NSMC 84.6% 대 84.2%,
+  MMLU 52.75% 대 50.25% ([기록](experiments/2026-10-21-full8b-quality.md)). 일반 능력은 LoRA가 더 잘 지킨다(MMLU 63%).
 
 원자료는 [docs/validation.md](docs/validation.md)와 [`experiments/`](experiments)에 있다.
 
+카드 1장의 학습 에너지, 같은 노드·레시피(카드 전력은 Prometheus; [기록](experiments/2026-10-21-energy-rngd-vs-a100.md)):
+
+| Llama-3.1-8B | RNGD tok/s | RNGD tok/J | A100 tok/s | A100 tok/J |
+| --- | ---: | ---: | ---: | ---: |
+| 전체 파인튜닝, S=512, accum 4, CPU 오프로드 | 332 | **4.32** | 492 | 3.08 |
+| LoRA r=16 q·v, S=128 (두 장치 모두 npu-lora) | 49 | 1.05 | 366 | 2.41 |
+| LoRA, A100 에서 일반 PyTorch autograd | — | — | 1,683 | 6.39 |
+
+오프로드 경로의 host 전력까지 넣으면 전체 파인튜닝은 1.92(RNGD) 대 1.55(A100) tok/J다. 지금 `main`의 RNGD LoRA는
+2026-10-16 실행보다 4배 느려서(레이어당 그래프 조각 증가) 이 tok/J는 RNGD의 한계가 아니다.
+
 > [!NOTE]
-> **프로토타입.** LoRA 품질은 Llama-3.1-8B로, 전체 파인튜닝은 Llama-3.2-1B로 검증했다. Llama-3.1-8B 전체
-> 파인튜닝은 카드 1장과 CPU 오프로드로 돌지만([step 시간 측정](experiments/2026-10-16-full8b-offload-step.md))
-> 품질 비교는 아직 하지 않았다. 현재 상태와 열린 질문: [STATUS.md](STATUS.md).
+> **프로토타입.** LoRA와 전체 파인튜닝 품질을 Llama-3.1-8B(전체 파인튜닝은 카드 1장 + CPU 오프로드)와
+> Llama-3.2-1B로 검증했다. 현재 상태와 열린 질문: [STATUS.md](STATUS.md).
 
 ## 🚀 빠른 시작
 

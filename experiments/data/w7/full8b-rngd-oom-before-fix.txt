@@ -1,0 +1,3 @@
+ERROR furiosa_torch::cpp::allocator: Failed to alloc dram shared, required: 117440512, MemoryError(Allocate(117440512, 0, out of memory, requested: 117440512, capacity: 0
+torch.OutOfMemoryError: failed to allocate 117440512 bytes on DRAM_SHARED
+{"ts": 1792542590.372, "run": "w7-full8b-rngd", "event": "step", "step": 16, "loss": 1.2809797525405884, "grad_norm": 9.812173505199565, "lr": 9.975414512725058e-06, "tokens": 2048, "seconds": 6.545, "tokens_per_s": 312.9, "wait_weights_s": 3.146, "norm_s": 0.029, "prev_d2h_s": 4.213, "prev_adamw_s": 7.704, "prev_upload_s": 3.305}

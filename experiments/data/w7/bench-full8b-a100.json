@@ -1,0 +1,93 @@
+{
+ "model": "/mnt/store/w7/out/full8b-cuda",
+ "results": {
+  "full8b-cuda": {
+   "nsmc": {
+    "accuracy": 0.842,
+    "n": 1000,
+    "seconds": 3.3,
+    "samples": [
+     {
+      "prompt": "다음 영화 리뷰의 감정을 '긍정' 또는 '부정' 한 단어로만 답하세요.\n리뷰: 넘~유쾌하고~흥미롭고~반전있으며~슬픈영화강추!!!!",
+      "expect": "긍정",
+      "answer": "긍정"
+     },
+     {
+      "prompt": "다음 영화 리뷰의 감정을 '긍정' 또는 '부정' 한 단어로만 답하세요.\n리뷰: 진짜 사상 최악의 병맛영화",
+      "expect": "부정",
+      "answer": "부정"
+     },
+     {
+      "prompt": " 리뷰의 감정을 '긍정' 또는 '부정' 한 단어로만 답하세요.\n리뷰: 택시1,2,3 맥시멈 봐는데 이게 가장재밋음 맥주한잔하며 즐기기좋은영화 ㅋ",
+      "expect": "긍정",
+      "answer": "긍정"
+     },
+     {
+      "prompt": "다음 영화 리뷰의 감정을 '긍정' 또는 '부정' 한 단어로만 답하세요.\n리뷰: SF와 순정의 독특한 만남, 슬프고도 아름다운 애절한 사랑..",
+      "expect": "긍정",
+      "answer": "긍정"
+     },
+     {
+      "prompt": "다음 영화 리뷰의 감정을 '긍정' 또는 '부정' 한 단어로만 답하세요.\n리뷰: 미친.....적당히순수해야지.....답답해서중간에껐음",
+      "expect": "부정",
+      "answer": "부정"
+     }
+    ]
+   },
+   "mmlu": {
+    "accuracy": 0.5025,
+    "n": 400,
+    "seconds": 3.5,
+    "samples": [
+     {
+      "prompt": " myth\nD. existence precedes essence\nAnswer with only the letter (A, B, C, or D).",
+      "expect": "D",
+      "answer": "D"
+     },
+     {
+      "prompt": "yment of the land thereby conveyed.\nAnswer with only the letter (A, B, C, or D).",
+      "expect": "B",
+      "answer": "A"
+     },
+     {
+      "prompt": "rual\nC. proliferative\nD. myometrial\nAnswer with only the letter (A, B, C, or D).",
+      "expect": "C",
+      "answer": "A"
+     },
+     {
+      "prompt": "clear transfer\nD. none of the above\nAnswer with only the letter (A, B, C, or D).",
+      "expect": "C",
+      "answer": "C"
+     },
+     {
+      "prompt": "ey carry blood away from the heart.\nAnswer with only the letter (A, B, C, or D).",
+      "expect": "D",
+      "answer": "D"
+     }
+    ]
+   }
+  }
+ },
+ "measurements": [
+  {
+   "name": "accuracy_pct",
+   "value": 84.2,
+   "tags": {
+    "component": "npu-lora",
+    "model": "full8b-cuda",
+    "dataset": "nsmc",
+    "run_id": "full8b-cuda"
+   }
+  },
+  {
+   "name": "accuracy_pct",
+   "value": 50.25,
+   "tags": {
+    "component": "npu-lora",
+    "model": "full8b-cuda",
+    "dataset": "mmlu",
+    "run_id": "full8b-cuda"
+   }
+  }
+ ]
+}

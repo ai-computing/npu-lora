@@ -72,9 +72,13 @@ class DeviceExperts:
                 torch.zeros(H, Fd, dtype=BF) + 0.01
             gy = torch.zeros(n, H, dtype=BF) + 0.01
             k = f"moe-expert-H{H}-F{Fd}-n{n}"
-            fwd = self.cp(f"{k}-fwd", G.build(expert_fwd, [x, gu, dn]), [x, gu, dn])
-            bwd = self.cp(f"{k}-bwd{'-full' if self.full else ''}",
-                          G.build(expert_bwd_fn(self.full), [x, gu, dn, gy]), [x, gu, dn, gy])
+            # The first call comes from _OnDevice.forward, where autograd is off. Traced under no_grad, the vjp
+            # keeps aten.silu_backward undecomposed, and the furiosa compiler rejects it ("Not importable for all
+            # cases"); with grad mode on it is decomposed like in the dense layers.
+            with torch.enable_grad():
+                fwd = self.cp(f"{k}-fwd", G.build(expert_fwd, [x, gu, dn]), [x, gu, dn])
+                bwd = self.cp(f"{k}-bwd{'-full' if self.full else ''}",
+                              G.build(expert_bwd_fn(self.full), [x, gu, dn, gy]), [x, gu, dn, gy])
             self.graphs[key] = (fwd, bwd)
         return self.graphs[key]
 
