@@ -20,8 +20,16 @@ class Backend:
     def to_device(self, t):
         return t
 
-    def to_host(self, t):
-        return t
+    def to_host(self, t, out=None):
+        """장치 → host. out 을 주면 그 버퍼에 복사한다(매번 새로 할당하는 것보다 훨씬 빠르다)."""
+        if out is None:
+            return t
+        out.copy_(t)
+        return out
+
+    def host_buffer(self, like):
+        """to_host(out=)·업로드에 거듭 쓸 host 버퍼."""
+        return torch.empty(like.shape, dtype=like.dtype)
 
     def sync(self):
         pass
@@ -52,11 +60,36 @@ class CUDABackend(Backend):
                     setattr(mod, k, v.to(self.dev))
         return gm.to(self.dev)
 
-    def to_device(self, t):
-        return t.to(self.dev, non_blocking=True)
+    def _copy_stream(self):
+        # 레이어 작업 스레드마다 복사 전용 stream. 기본 stream 에서 돌면 복사가 계산 뒤에 줄을 선다.
+        import threading
+        local = self.__dict__.setdefault("_local", threading.local())
+        if not hasattr(local, "stream"):
+            local.stream = torch.cuda.Stream(self.dev)
+        return local.stream
 
-    def to_host(self, t):
-        return t.cpu()
+    def to_device(self, t):
+        if t.device.type != "cpu":
+            return t.to(self.dev)
+        s = self._copy_stream()
+        with torch.cuda.stream(s):
+            out = (t if t.is_pinned() else t.pin_memory()).to(self.dev, non_blocking=True)
+        s.synchronize()          # 돌려받은 텐서는 어느 stream 에서 써도 안전하다
+        return out
+
+    def host_buffer(self, like):
+        return torch.empty(like.shape, dtype=like.dtype, pin_memory=True)
+
+    def to_host(self, t, out=None):
+        s = self._copy_stream()
+        s.wait_stream(torch.cuda.current_stream(self.dev))   # t 를 만든 계산이 끝난 뒤 복사
+        if out is None:
+            out = self.host_buffer(t)
+        with torch.cuda.stream(s):
+            out.copy_(t, non_blocking=True)
+        t.record_stream(s)
+        s.synchronize()
+        return out
 
     def sync(self):
         torch.cuda.synchronize(self.dev)
@@ -164,8 +197,12 @@ class FuriosaBackend(Backend):
     def to_device(self, t):
         return t if self.compile_only else t.to(self.dev)
 
-    def to_host(self, t):
-        return t.cpu()
+    def to_host(self, t, out=None):
+        # 미리 잡아 둔 버퍼로 받으면 19.9 GB/s, t.cpu() 는 매번 새 메모리를 잡느라 3.0 GB/s (e11 RNGD)
+        if out is None:
+            return t.cpu()
+        out.copy_(t)
+        return out
 
     def sync(self):
         if self._stream is not None:

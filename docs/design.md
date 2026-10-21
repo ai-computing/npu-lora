@@ -45,8 +45,11 @@ step t   backward:  L31 ──► L30 ──► … ──► L0
 step t+1 forward:  L0 waits for its H2D ─► L1 waits ─► …                           ┘
 ```
 
-- Gradients are accumulated on the device across micro-batches and downloaded once per step
-  (device→host is the slowest link: 3.1 GB/s measured on RNGD, so 16 GB for 8B ≈ 5 s).
+- Gradients are accumulated on the device across micro-batches and downloaded once per step into
+  host buffers that are allocated once per layer and reused (`Backend.host_buffer`, `to_host(out=)`).
+  On RNGD, `t.cpu()` reaches only 3.0 GB/s because it allocates fresh host memory each time; copying
+  into a reused buffer reaches 19.9 GB/s. On CUDA the buffers are pinned and each worker thread copies
+  on its own stream, so copies do not queue behind compute.
 - Each layer's squared gradient norm is reduced on the device right after its backward, so the
   global clip coefficient is known as soon as the backward pass ends — without waiting for the large
   downloads.
@@ -54,8 +57,14 @@ step t+1 forward:  L0 waits for its H2D ─► L1 waits ─► …              
   worker pool; the next step's forward waits for a layer only when it reaches it. The resulting update
   is identical to a synchronous step (`tests/test_cpu.py::test_full_pipeline_equals_sync_update`).
 
-Measured on RNGD + host (`npu_lora.hwprobe`): host→device 6.4 GB/s, device→host 3.1 GB/s, and a
-device→host copy in another thread overlaps with running compiled graphs.
+Llama-3.1-8B full fine-tuning, S=512, one card (tokens/s):
+
+| | accum 1 | accum 4 |
+| --- | ---: | ---: |
+| RNGD | 128 | 315 |
+| A100 80GB | 153 | 477 |
+
+The remaining ~3 s per step is shared between host AdamW over 7B parameters and the transfers.
 
 ## Job layout on Kubernetes
 

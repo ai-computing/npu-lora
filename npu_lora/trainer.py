@@ -163,7 +163,7 @@ class LoRATrainer:
             # 레이어마다 [내리기 → (clip 확정 대기) → AdamW → 올리기] 를 한 작업으로, 여러 레이어를 병렬로.
             self._layer_pool = ThreadPoolExecutor(4, thread_name_prefix="npu-lora-layer")
             self._step_ev = None
-            
+            self._bufs = [None] * c.n_layers            # 레이어별 host 버퍼 (bf16 기울기, fp32 기울기, bf16 업로드)
         else:
             self.opt = mk(self.params)
         self._upload_adapters()
@@ -324,8 +324,16 @@ class LoRATrainer:
     def _layer_job(self, i, dev_grads, k, ev, box):
         """레이어 i: 기울기 내리기 → clip 확정 대기 → host AdamW → bf16 올리기. 새 장치 가중치를 돌려준다."""
         t0 = time.time()
-        grads = [self.be.to_host(x).float().div_(k) for x in dev_grads]
+        if self._bufs[i] is None:
+            self._bufs[i] = ([self.be.host_buffer(x) for x in dev_grads],
+                             [torch.empty(p.shape, dtype=torch.float32) for p in self.master[i]],
+                             [self.be.host_buffer(torch.empty(p.shape, dtype=BF)) for p in self.master[i]])
+        hb, g32, up = self._bufs[i]
+        grads = [g.copy_(self.be.to_host(x, out=b)).div_(k) for x, b, g in zip(dev_grads, hb, g32)]
         t1 = time.time()
+        # this step's backward no longer needs layer i: drop the old bf16 device weights before uploading the
+        # new ones, or every layer briefly holds two copies (8B: +14 GB, out of device memory after ~15 steps)
+        self.dev_W[i] = None
         ev.wait()                                   # 역전파가 끝나야 전역 clip 계수가 정해진다
         clip, lr = box
         with torch.no_grad():
@@ -337,7 +345,7 @@ class LoRATrainer:
         self.opts[i].zero_grad(set_to_none=True)
         t2 = time.time()
         with torch.no_grad():
-            out = [self.be.to_device(p.detach().to(BF)) for p in self.master[i]]
+            out = [self.be.to_device(u.copy_(p)) for p, u in zip(self.master[i], up)]
         t3 = time.time()
         return out, (t1 - t0, t2 - t1, t3 - t2)
 
