@@ -1,12 +1,15 @@
 """MoE 학습에서 hot expert 를 장치에서 계산한다 (추론의 expert 배치와 같은 방식).
 
-장치 쪽 gather 가 없으므로 라우팅·토큰 분배는 host 에서 한다. expert e 로 간 행만 host 에서 모아 정해진 행 수
-(bucket)로 채워 올리고, (H, F, bucket) 마다 한 번 컴파일한 expert 순전파/역전파 그래프로 계산한다. 역전파 그래프는
-입력 기울기와(전체 파인튜닝이면) 그 expert 의 가중치 기울기를 낸다. torch.autograd.Function 이 장치 역전파를
-host autograd 에 잇기 때문에, 가중치 기울기는 쌓인 expert 파라미터의 해당 조각에 그대로 들어간다.
+장치 쪽 gather 가 없으므로 라우팅·토큰 분배는 host 에서 한다. 한 레이어의 hot expert 들로 간 행을 host 에서 모아
+expert 마다 같은 행 수(bucket, 가장 많이 받은 hot expert 기준)로 채운 [E_hot, bucket, H] 하나로 올리고, 쌓은
+가중치 [E_hot, 2F, H]·[E_hot, H, F] 와 bmm 으로 계산한다 — 레이어당 순전파 한 번, 역전파 한 번의 장치 호출이다
+(expert 마다 따로 부르면 호출·복사가 hot expert 수만큼 늘어 host 보다 느렸다, #35). 그래프는
+(E_hot, H, F, bucket) 마다 한 번 컴파일한다. 역전파 그래프는 입력 기울기와(전체 파인튜닝이면) 쌓인 가중치의
+기울기를 낸다. torch.autograd.Function 이 장치 역전파를 host autograd 에 잇고, 쌓인 가중치는
+`gate_up_proj[hot]` 로 만들어 기울기가 expert 파라미터의 해당 조각에 그대로 들어간다.
 
-cold expert 는 host 에서 같은 식으로 계산한다. 어떤 expert 를 장치에 둘지는 라우팅 횟수로 정하고, step 사이에
-다시 정한다(`replan`).
+cold expert 는 host 에서 expert 마다 계산한다. 어떤 expert 를 장치에 둘지는 라우팅 횟수로 정하고, step 사이에
+다시 정한다(`replan`). 장치에는 레이어마다 지금 hot 인 expert 의 쌓인 가중치 한 벌만 둔다.
 
 지원: 표준 SwiGLU expert (gate_up_proj [E, 2F, H], down_proj [E, H, F], bias 없음, 기본 gate) — Qwen3-MoE,
 Qwen2-MoE(routed experts), Mixtral. 그 밖의 배치는 모두 host 에서 돈다.
@@ -32,18 +35,24 @@ def standard_swiglu(experts):
 
 
 def expert_fwd(x, gu, dn):
-    """x [n, H], gu [2F, H], dn [H, F] -> [n, H]"""
+    """one expert (host path): x [n, H], gu [2F, H], dn [H, F] -> [n, H]"""
     g, u = (x @ gu.t()).chunk(2, dim=-1)
     return (F.silu(g) * u) @ dn.t()
 
 
-def expert_bwd_fn(full):
-    """(x, gu, dn, gy) -> gx (LoRA: experts frozen) or (gx, g_gu, g_dn) (full fine-tuning)"""
+def experts_fwd(x, gu, dn):
+    """the hot experts of a layer at once: x [E, n, H], gu [E, 2F, H], dn [E, H, F] -> [E, n, H]"""
+    g, u = (x @ gu.transpose(-1, -2)).chunk(2, dim=-1)
+    return (F.silu(g) * u) @ dn.transpose(-1, -2)
+
+
+def experts_bwd_fn(full):
+    """(x, gu, dn, gy) -> gx (LoRA: experts frozen) or (gx, g_gu, g_dn) (full fine-tuning), batched like experts_fwd"""
     def bwd(x, gu, dn, gy):
         if full:
-            _, pull = torch.func.vjp(expert_fwd, x, gu, dn)
+            _, pull = torch.func.vjp(experts_fwd, x, gu, dn)
             return pull(gy)
-        _, pull = torch.func.vjp(lambda x_: expert_fwd(x_, gu, dn), x)
+        _, pull = torch.func.vjp(lambda x_: experts_fwd(x_, gu, dn), x)
         return pull(gy)[0]
     return bwd
 
@@ -56,83 +65,110 @@ def bucket(n):
 
 
 class DeviceExperts:
-    """compiled expert graphs per (H, F, bucket) and the device copies of the hot experts' weights"""
+    """compiled batched expert graphs per (E_hot, H, F, bucket) and each layer's stacked hot-expert weights"""
 
     def __init__(self, backend, compile_parts, full, log=lambda m: None):
         self.be, self.cp, self.full, self.log = backend, compile_parts, full, log
         self.graphs = {}
-        self.resident = {}                       # (layer, expert) -> (device gu, device dn)
-        self.calls = 0
+        self.resident = {}                       # layer -> (hot expert ids, device gu [E,2F,H], device dn [E,H,F])
+        self.calls = 0                           # device graph calls (forward + backward)
 
-    def _graphs(self, H, Fd, n):
-        key = (H, Fd, n)
+    def _graphs(self, E, H, Fd, n):
+        key = (E, H, Fd, n)
         if key not in self.graphs:
             from . import graph as G
-            x, gu, dn = torch.zeros(n, H, dtype=BF) + 0.01, torch.zeros(2 * Fd, H, dtype=BF) + 0.01, \
-                torch.zeros(H, Fd, dtype=BF) + 0.01
-            gy = torch.zeros(n, H, dtype=BF) + 0.01
-            k = f"moe-expert-H{H}-F{Fd}-n{n}"
-            # The first call comes from _OnDevice.forward, where autograd is off. Traced under no_grad, the vjp
+            x, gu, dn = torch.zeros(E, n, H, dtype=BF) + 0.01, torch.zeros(E, 2 * Fd, H, dtype=BF) + 0.01, \
+                torch.zeros(E, H, Fd, dtype=BF) + 0.01
+            gy = torch.zeros(E, n, H, dtype=BF) + 0.01
+            k = f"moe-experts-E{E}-H{H}-F{Fd}-n{n}"
+            # The first call comes from _HotBatch.forward, where autograd is off. Traced under no_grad, the vjp
             # keeps aten.silu_backward undecomposed, and the furiosa compiler rejects it ("Not importable for all
             # cases"); with grad mode on it is decomposed like in the dense layers.
             with torch.enable_grad():
-                fwd = self.cp(f"{k}-fwd", G.build(expert_fwd, [x, gu, dn]), [x, gu, dn])
+                fwd = self.cp(f"{k}-fwd", G.build(experts_fwd, [x, gu, dn]), [x, gu, dn])
                 bwd = self.cp(f"{k}-bwd{'-full' if self.full else ''}",
-                              G.build(expert_bwd_fn(self.full), [x, gu, dn, gy]), [x, gu, dn, gy])
+                              G.build(experts_bwd_fn(self.full), [x, gu, dn, gy]), [x, gu, dn, gy])
             self.graphs[key] = (fwd, bwd)
         return self.graphs[key]
 
-    def weights(self, layer, e, gu, dn):
-        k = (layer, e)
-        if k not in self.resident:
-            self.resident[k] = (self.be.to_device(gu.detach().to(BF).contiguous()),
-                                self.be.to_device(dn.detach().to(BF).contiguous()))
-        return self.resident[k]
+    def weights(self, layer, hot, experts_module):
+        """device (gu, dn) stacks of `hot` (sorted expert ids) of this layer; uploaded when the hot set changes"""
+        r = self.resident.get(layer)
+        if r is None or r[0] != hot:
+            m, idx = experts_module, torch.tensor(hot)
+            r = (hot, self.be.to_device(m.gate_up_proj.detach()[idx].to(BF).contiguous()),
+                 self.be.to_device(m.down_proj.detach()[idx].to(BF).contiguous()))
+            self.resident[layer] = r
+        return r[1], r[2]
 
     def evict(self, keep):
-        for k in [k for k in self.resident if k not in keep]:
-            del self.resident[k]
+        """keep: {(layer, expert)} of the new hot sets; drops the stacks whose hot set changed"""
+        for layer in list(self.resident):
+            if {(layer, e) for e in self.resident[layer][0]} != {k for k in keep if k[0] == layer}:
+                del self.resident[layer]
 
     def refresh(self, layer, experts_module):
-        """after a weight update (full fine-tuning) re-upload the resident experts of this layer"""
-        for (l, e) in [k for k in self.resident if k[0] == layer]:
-            self.resident[(l, e)] = (self.be.to_device(experts_module.gate_up_proj[e].detach().to(BF).contiguous()),
-                                     self.be.to_device(experts_module.down_proj[e].detach().to(BF).contiguous()))
+        """after a weight update (full fine-tuning) re-upload this layer's stacked hot experts"""
+        r = self.resident.pop(layer, None)
+        if r is not None:
+            self.weights(layer, r[0], experts_module)
 
 
-class _OnDevice(torch.autograd.Function):
+_NONE = torch.empty(0)
+
+
+class _HotBatch(torch.autograd.Function):
+    """all hot-expert rows of one layer in one device call each way.
+
+    x [N, H] are the rows routed to hot experts (token copies), flat [N] each row's place in the packed
+    [E_hot * nb, H] input (expert slot * nb + rank within the expert). gu, dn are the host stacks
+    (m.gate_up_proj[hot], ...; empty when the experts are frozen): autograd routes their gradients back into
+    the stacked parameters. The device uses its resident copies of the same stacks.
+    """
+
     @staticmethod
-    def forward(ctx, x, gu, dn, dev, layer, e):
-        n = x.shape[0]
-        nb = bucket(n)
-        H, Fd = x.shape[1], dn.shape[1]
-        fwd, bwd = dev._graphs(H, Fd, nb)
-        xp = torch.zeros(nb, H, dtype=BF)
-        xp[:n] = x.detach().to(BF)
-        dgu, ddn = dev.weights(layer, e, gu, dn)
-        xd = dev.be.to_device(xp)
-        y = dev.be.to_host(fwd(xd, dgu, ddn))[:n].to(x.dtype)
-        ctx.save_for_backward(xp)
-        ctx.n, ctx.dev, ctx.key, ctx.bwd = n, dev, (layer, e), bwd
+    def forward(ctx, x, gu, dn, dev, layer, hot, flat, nb, m):
+        E, H, Fd = len(hot), x.shape[1], m.down_proj.shape[-1]
+        fwd, bwd = dev._graphs(E, H, Fd, nb)
+        xp = torch.zeros(E * nb, H, dtype=BF)
+        xp[flat] = x.detach().to(BF)
+        dgu, ddn = dev.weights(layer, hot, m)
+        y = dev.be.to_host(fwd(dev.be.to_device(xp.view(E, nb, H)), dgu, ddn)).reshape(E * nb, H)[flat]
+        ctx.save_for_backward(xp, flat)
+        ctx.dev, ctx.layer, ctx.hot, ctx.m, ctx.bwd, ctx.shape = dev, layer, hot, m, bwd, (E, nb, H)
         dev.calls += 1
-        return y
+        return y.to(x.dtype)
 
     @staticmethod
     def backward(ctx, gy):
-        (xp,) = ctx.saved_tensors
-        dev, n = ctx.dev, ctx.n
-        gyp = torch.zeros(xp.shape, dtype=BF)
-        gyp[:n] = gy.to(BF)
-        dgu, ddn = dev.weights(*ctx.key, None, None)
-        out = ctx.bwd(dev.be.to_device(xp), dgu, ddn, dev.be.to_device(gyp))
+        xp, flat = ctx.saved_tensors
+        dev, (E, nb, H) = ctx.dev, ctx.shape
+        gyp = torch.zeros(E * nb, H, dtype=BF)
+        gyp[flat] = gy.to(BF)
+        dgu, ddn = dev.weights(ctx.layer, ctx.hot, ctx.m)
+        out = ctx.bwd(dev.be.to_device(xp.view(E, nb, H)), dgu, ddn, dev.be.to_device(gyp.view(E, nb, H)))
+        dev.calls += 1
+        none = (None,) * 6
         if dev.full:
             gx, ggu, gdn = (dev.be.to_host(t) for t in out)
-            return gx[:n].to(gy.dtype), ggu.to(gy.dtype), gdn.to(gy.dtype), None, None, None
-        return dev.be.to_host(out)[:n].to(gy.dtype), None, None, None, None, None
+            return (gx.reshape(E * nb, H)[flat].to(gy.dtype), ggu.to(gy.dtype), gdn.to(gy.dtype), *none)
+        return (dev.be.to_host(out).reshape(E * nb, H)[flat].to(gy.dtype), None, None, *none)
+
+
+def pack(slot, n_hot):
+    """slot [N] (hot-expert position of each row) -> (order, flat, nb): rows sorted by expert, each row's place in
+    the packed [n_hot * nb, H] input, and the rows per expert nb (bucket of the busiest hot expert)"""
+    order = torch.argsort(slot, stable=True)
+    s = slot[order]
+    n_per = torch.bincount(s, minlength=n_hot)
+    rank = torch.arange(len(s)) - (torch.cumsum(n_per, 0) - n_per)[s]
+    nb = bucket(int(n_per.max()))
+    return order, s * nb + rank, nb
 
 
 class HybridExperts(torch.nn.Module):
-    """drop-in for a transformers >= 5 stacked experts module: hot experts on the device, the rest on the host"""
+    """drop-in for a transformers >= 5 stacked experts module: hot experts on the device (one batched call per
+    layer and direction), the rest on the host"""
 
     def __init__(self, inner, layer, dev):
         super().__init__()
@@ -153,14 +189,26 @@ class HybridExperts(torch.nn.Module):
         self.counts += torch.bincount(flat.detach().cpu(), minlength=self.num_experts)[:self.num_experts]
         m = self.inner
         out = torch.zeros(T, H, dtype=torch.float32)
+        hot = tuple(sorted(self.hot))
+        if hot:
+            slot_of = torch.full((self.num_experts,), -1, dtype=torch.long)
+            slot_of[list(hot)] = torch.arange(len(hot))
+            slot = slot_of[flat]
+            sel = (slot >= 0).nonzero().squeeze(1)
+            if len(sel):
+                order, place, nb = pack(slot[sel], len(hot))
+                sel = sel[order]
+                r, idx = rows[sel], torch.tensor(hot)
+                # full fine-tuning: the host stacks carry the weight gradients back; LoRA: nothing to copy
+                gu, dn = (m.gate_up_proj[idx], m.down_proj[idx]) if self.dev.full else (_NONE, _NONE)
+                y = _HotBatch.apply(hidden[r], gu, dn, self.dev, self.layer, hot, place, nb, m)
+                out = out.index_add(0, r, (y * wf[sel, None].to(y.dtype)).float())
         for e in torch.unique(flat).tolist():
+            if e in self.hot:
+                continue
             sel = (flat == e).nonzero().squeeze(1)
             r = rows[sel]
-            x = hidden[r]
-            if e in self.hot:
-                y = _OnDevice.apply(x, m.gate_up_proj[e], m.down_proj[e], self.dev, self.layer, e)
-            else:
-                y = expert_fwd(x, m.gate_up_proj[e], m.down_proj[e])
+            y = expert_fwd(hidden[r], m.gate_up_proj[e], m.down_proj[e])
             out = out.index_add(0, r, (y * wf[sel, None].to(y.dtype)).float())
         return out.to(hidden.dtype)
 

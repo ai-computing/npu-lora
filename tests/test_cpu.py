@@ -484,6 +484,21 @@ def test_moe_full_finetuning():
     assert abs(now - hf_now) / hf_now < 2e-2, (now, hf_now)
 
 
+def test_hot_expert_packing():
+    """pack(): rows grouped by hot expert, each at slot * nb + rank; nb = bucket of the busiest expert; the batched
+    expert graph equals the per-expert host computation on the packed rows"""
+    from npu_lora import moe_device as MD
+    slot = torch.tensor([2, 0, 2, 1, 2, 0])
+    order, place, nb = MD.pack(slot, 3)
+    assert nb == 8 and slot[order].tolist() == [0, 0, 1, 2, 2, 2]
+    assert place.tolist() == [0, 1, 8, 16, 17, 18]
+    g = torch.Generator().manual_seed(0)
+    x, gu, dn = torch.randn(3, nb, 16, generator=g), torch.randn(3, 24, 16, generator=g), torch.randn(3, 16, 12, generator=g)
+    y = MD.experts_fwd(x, gu, dn)
+    for e in range(3):
+        assert torch.allclose(y[e], MD.expert_fwd(x[e], gu[e], dn[e]), atol=1e-5)
+
+
 def _tiny_moe(d):
     from transformers import AutoConfig, AutoModelForCausalLM
     cfg = AutoConfig.for_model("qwen3_moe", hidden_size=64, intermediate_size=128, num_attention_heads=4,
@@ -526,7 +541,9 @@ def test_moe_hot_experts_on_device_match_host():
     host._upload_adapters(), hyb._upload_adapters()
     _, gh, _ = host.forward_backward(ids, lab)
     _, gd, _ = hyb.forward_backward(ids, lab)
-    assert hyb.moe_stats()["device_calls"] > 0
+    # batched, per layer (2 layers): forward, the forward that HostMLP.backward recomputes, backward — not one
+    # call per hot expert
+    assert hyb.moe_stats()["device_calls"] == 6, hyb.moe_stats()
     for a, b in zip((x for gl in gd for x in gl), (x for gl in gh for x in gl)):
         assert rel(a, b) < 5e-2, rel(a, b)                     # bf16: host autograd vs compiled vjp
     # full fine-tuning: host-part gradients at the first step
