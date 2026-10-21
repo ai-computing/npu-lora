@@ -5,6 +5,8 @@ furiosa-torch 에는 장치 쪽 gather 가 없어 token→expert 분배를 컴�
 여기서 HF 모듈 그대로(라우팅·shared expert·가중치 변환이 계열마다 HF 와 같다). expert 는 고정이고, 역전파는
 입력(attention 출력)에 대한 기울기만 낸다 — LoRA 는 attention 투영에 붙는다.
 """
+import time
+
 import torch
 
 BF = torch.bfloat16
@@ -32,6 +34,7 @@ class HostMLP:
             self.blocks.append((norm, mlp))
         del model                      # embeddings, attention and lm_head are freed; the blocks stay
         self.trainable = trainable
+        self.seconds = 0.0             # host time in forward/backward (step-time split: host MoE vs the rest)
         if trainable:
             self.params = [[p for p in (*norm.parameters(), *mlp.parameters())] for norm, mlp in self.blocks]
             self.master = [[p.detach().float().clone().requires_grad_(True) for p in ps] for ps in self.params]
@@ -55,10 +58,20 @@ class HostMLP:
         return a + y.reshape(a.shape).to(a.dtype)
 
     def forward(self, i, a):
+        t0 = time.perf_counter()
         with torch.no_grad():
-            return self._f(i, a)
+            y = self._f(i, a)
+        self.seconds += time.perf_counter() - t0
+        return y
 
     def backward(self, i, a, g):
+        t0 = time.perf_counter()
+        try:
+            return self._backward(i, a, g)
+        finally:
+            self.seconds += time.perf_counter() - t0
+
+    def _backward(self, i, a, g):
         x = a.detach().requires_grad_(True)
         with torch.enable_grad():
             y = self._f(i, x)
@@ -97,3 +110,43 @@ def _adamw(ps, kw):
         return torch.optim.AdamW(ps, fused=True, **kw)
     except (RuntimeError, TypeError, ValueError):
         return torch.optim.AdamW(ps, foreach=True, **kw)
+
+
+class RoutingPins:
+    """Record each MoE layer's top-k expert ids (`record`), or force recorded ones (`pin`), on the HostMLP routers.
+
+    For comparing two backends on MoE checkpoints: tiny numeric differences flip some tokens' top-k choice, which
+    changes their whole MoE output; pinned to the same experts, the comparison measures numerics only. The pinned
+    router keeps its own probabilities (weights = its softmax at the pinned ids, renormalized like the router), so
+    gradients still flow through the router."""
+
+    def __init__(self, blocks):
+        self.routers = [(i, mlp.gate) for i, (_, mlp) in enumerate(blocks) if hasattr(getattr(mlp, "gate", None), "top_k")]
+        self.ids, self.mode, self._orig = {}, None, {}
+
+    def __enter__(self):
+        for i, r in self.routers:
+            self._orig[i] = r.forward
+            r.forward = (lambda h, i=i, r=r: self._route(i, r, h))
+        return self
+
+    def __exit__(self, *exc):
+        for i, r in self.routers:
+            r.forward = self._orig[i]
+
+    def _route(self, i, router, hidden):
+        probs, scores, ids = self._orig[i](hidden)
+        if self.mode == "record":
+            self.ids.setdefault(i, ids.detach().clone())          # the forward pass (backward recomputes it)
+        elif self.mode == "pin" and i in self.ids:
+            ids = self.ids[i]
+            val = probs.gather(-1, ids)
+            if getattr(router, "norm_topk_prob", True):
+                val = val / val.sum(dim=-1, keepdim=True)
+            scores = val.to(scores.dtype)
+        return probs, scores, ids
+
+    def flips(self, other):
+        """per layer, tokens whose expert set differs between self's and other's recorded ids"""
+        return {i: int(sum(set(a.tolist()) != set(b.tolist()) for a, b in zip(self.ids[i], other.ids[i])))
+                for i in self.ids if i in other.ids}

@@ -336,8 +336,14 @@ class LoRATrainer:
 
     def train_step(self, batch):
         """batch: [(ids, labels, doc_ids)] × accum. 반환: 지표 dict"""
-        if self.tc.full:
-            return self._train_step_full(batch)
+        host0 = self.host_mlp.seconds if self.host_mlp is not None else 0.0
+        out = self._train_step_full(batch) if self.tc.full else self._train_step_lora(batch)
+        if self.host_mlp is not None:      # MoE: where the step went (host MoE blocks vs device graphs + transfers)
+            out["host_moe_s"] = round(self.host_mlp.seconds - host0, 3)
+            out["device_and_transfer_s"] = round(out["seconds"] - out["host_moe_s"], 3)
+        return out
+
+    def _train_step_lora(self, batch):
         t0 = time.time()
         acc = None
         losses, toks = [], 0
