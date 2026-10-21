@@ -64,7 +64,7 @@ PEFT adapters or full HF models that vLLM <code>--enable-lora</code> and llm-d l
 | | |
 | --- | --- |
 | **Hardware** | FuriosaAI RNGD (furiosa-torch 2026.2) · NVIDIA GPU (reference) · CPU (reference) |
-| **Models** | Llama 2/3/3.1/3.2 architecture (GQA, RoPE incl. llama3 scaling, SwiGLU) |
+| **Models** | Llama 2/3/3.1/3.2 architecture (GQA, RoPE incl. llama3 scaling, SwiGLU) · Qwen2 trains on RNGD with A100-equal quality but fails `npu-lora check` ([record](experiments/2026-10-21-qwen25-1.5b-lora.md)) |
 | **Modes** | LoRA (q/k/v/o) · full fine-tuning of decoder layers with CPU offload |
 | **Outputs** | PEFT adapter (`adapter_model.safetensors`) · full HF model · merged model |
 | **Integrations** | vLLM runtime LoRA loading · llm-d · Kubernetes Jobs · [lmd-top](https://github.com/ai-computing/lmd-top) `--plan train` · Prometheus metrics |
@@ -82,14 +82,25 @@ Same data, seed and hyper-parameters on RNGD and A100 (Llama-3.1-8B-Instruct, Lo
 
 - Gradients match a CPU reference: cosine ≥ 0.9997 (Llama-3.1-8B layers + 128k-vocab head).
 - One RNGD card trains Llama-3.1-8B LoRA at ~0.7 s per 128-token step.
-- Full fine-tuning is validated on Llama-3.2-1B.
+- Llama-3.1-8B full fine-tuning on one RNGD card (CPU offload) matches the same run on A100: NSMC 84.6% vs 84.2%,
+  MMLU 52.75% vs 50.25% ([record](experiments/2026-10-21-full8b-quality.md)); LoRA keeps more general ability (MMLU 63%).
 
 See [docs/validation.md](docs/validation.md) and [`experiments/`](experiments) for the raw numbers.
 
+Training energy on one card, same node and recipe (card power from Prometheus; [record](experiments/2026-10-21-energy-rngd-vs-a100.md)):
+
+| Llama-3.1-8B | RNGD tok/s | RNGD tok/J | A100 tok/s | A100 tok/J |
+| --- | ---: | ---: | ---: | ---: |
+| Full fine-tuning, S=512, accum 4, CPU offload | 332 | **4.32** | 492 | 3.08 |
+| LoRA r=16 q·v, S=128 (npu-lora on both) | 49 | 1.05 | 366 | 2.41 |
+| LoRA, A100 with plain PyTorch autograd | — | — | 1,683 | 6.39 |
+
+Counting the host power of the offload path, full fine-tuning is 1.92 (RNGD) vs 1.55 (A100) tok/J. RNGD LoRA on
+current `main` is 4× slower than the 2026-10-16 run (more graph parts per layer), so its tok/J is not RNGD's limit.
+
 > [!NOTE]
-> **Prototype.** LoRA quality is validated on Llama-3.1-8B and full fine-tuning on Llama-3.2-1B. Llama-3.1-8B
-> full fine-tuning runs on one card with CPU offload ([step-time measurement](experiments/2026-10-16-full8b-offload-step.md));
-> its quality has not been compared yet. Current state and open questions: [STATUS.md](STATUS.md).
+> **Prototype.** LoRA and full fine-tuning quality are validated on Llama-3.1-8B (full fine-tuning on one card with
+> CPU offload) and Llama-3.2-1B. Current state and open questions: [STATUS.md](STATUS.md).
 
 ## 🚀 Quick start
 

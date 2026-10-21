@@ -1,0 +1,222 @@
+{"ts": 1792547867.735, "run": "w7-split8b-rngd", "event": "start", "examples": 8000, "truncated": 4, "model": "/mnt/store/hub/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659", "config": {"H": 4096, "I": 14336, "nh": 32, "nkv": 8, "n_layers": 32, "vocab": 128256, "rope_theta": 500000.0, "eps": 1e-05, "rope_scaling": [8.0, 1.0, 4.0, 8192], "family": "llama", "head_dim": 0, "qkv_bias": false, "qk_norm": false, "gemma": false, "attn_scale": 0.0, "layer_types": [], "rope_local_theta": 10000.0, "rope_linear": 1.0, "window": 0, "moe": false}, "lora": {"r": 16, "alpha": 32.0, "targets": ["q", "v"], "scale": 2.0}, "train": {"seq_len": 512, "lr": 1e-05, "weight_decay": 0.0, "betas": [0.9, 0.999], "grad_clip": 1.0, "accum": 4, "warmup": 10, "steps": 25, "seed": 0, "log_every": 1, "full": true, "moe_hot_fraction": 0.0, "moe_replan_every": 1, "resident_layers": 0}, "graph_parts_max_mm": 2, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792548016.485, "run": "w7-split8b-rngd", "event": "weights_on_device", "layers": 32, "seconds": 148.8}
+{"ts": 1792548030.754, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 1/11 (12 ops) 0s"}
+{"ts": 1792548030.761, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 2/11 (1 ops) 0s"}
+{"ts": 1792548030.768, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 3/11 (1 ops) 0s"}
+{"ts": 1792548030.791, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 4/11 (2 ops) 0s"}
+{"ts": 1792548030.818, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 5/11 (4 ops) 0s"}
+{"ts": 1792548030.824, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 6/11 (1 ops) 0s"}
+{"ts": 1792548030.901, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 7/11 (19 ops) 0s"}
+{"ts": 1792548030.912, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 8/11 (3 ops) 0s"}
+{"ts": 1792548030.988, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 9/11 (20 ops) 0s"}
+{"ts": 1792548031.084, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 10/11 (14 ops) 0s"}
+{"ts": 1792548031.119, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 11/11 (4 ops) 0s"}
+{"ts": 1792548032.137, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 1/36 (14 ops) 0s"}
+{"ts": 1792548032.142, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 2/36 (1 ops) 0s"}
+{"ts": 1792548032.151, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 3/36 (1 ops) 0s"}
+{"ts": 1792548032.174, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 4/36 (3 ops) 0s"}
+{"ts": 1792548032.196, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 5/36 (4 ops) 0s"}
+{"ts": 1792548032.201, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 6/36 (1 ops) 0s"}
+{"ts": 1792548032.272, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 7/36 (20 ops) 0s"}
+{"ts": 1792548032.279, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 8/36 (3 ops) 0s"}
+{"ts": 1792548032.351, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 9/36 (21 ops) 0s"}
+{"ts": 1792548032.448, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 10/36 (16 ops) 0s"}
+{"ts": 1792548032.507, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 11/36 (7 ops) 0s"}
+{"ts": 1792548032.517, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 12/36 (2 ops) 0s"}
+{"ts": 1792548032.686, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 13/36 (6 ops) 0s"}
+{"ts": 1792548032.701, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 14/36 (2 ops) 0s"}
+{"ts": 1792548032.825, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 15/36 (2 ops) 0s"}
+{"ts": 1792548032.902, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 16/36 (9 ops) 0s"}
+{"ts": 1792548032.912, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 17/36 (2 ops) 0s"}
+{"ts": 1792548033.149, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 18/36 (23 ops) 0s"}
+{"ts": 1792548033.159, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 19/36 (2 ops) 0s"}
+{"ts": 1792548033.228, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 20/36 (9 ops) 0s"}
+{"ts": 1792548033.306, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 21/36 (16 ops) 0s"}
+{"ts": 1792548033.311, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 22/36 (1 ops) 0s"}
+{"ts": 1792548033.332, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 23/36 (4 ops) 0s"}
+{"ts": 1792548033.357, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 24/36 (9 ops) 0s"}
+{"ts": 1792548033.37, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 25/36 (3 ops) 0s"}
+{"ts": 1792548033.397, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 26/36 (4 ops) 0s"}
+{"ts": 1792548033.438, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 27/36 (10 ops) 0s"}
+{"ts": 1792548033.453, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 28/36 (2 ops) 0s"}
+{"ts": 1792548033.458, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 29/36 (2 ops) 0s"}
+{"ts": 1792548033.484, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 30/36 (2 ops) 0s"}
+{"ts": 1792548033.496, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 31/36 (2 ops) 0s"}
+{"ts": 1792548033.5, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 32/36 (2 ops) 0s"}
+{"ts": 1792548033.533, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 33/36 (3 ops) 0s"}
+{"ts": 1792548033.55, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 34/36 (2 ops) 0s"}
+{"ts": 1792548033.557, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 35/36 (2 ops) 0s"}
+{"ts": 1792548033.695, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 36/36 (21 ops) 0s"}
+{"ts": 1792548033.873, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-4096x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548033.993, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-1024x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548034.355, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-14336x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548034.713, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-4096x14336 1/1 (3 ops) 0s"}
+{"ts": 1792548035.797, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 1/43 (14 ops) 0s"}
+{"ts": 1792548035.807, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 2/43 (1 ops) 0s"}
+{"ts": 1792548035.813, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 3/43 (1 ops) 0s"}
+{"ts": 1792548035.836, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 4/43 (3 ops) 0s"}
+{"ts": 1792548035.86, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 5/43 (4 ops) 0s"}
+{"ts": 1792548035.867, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 6/43 (1 ops) 0s"}
+{"ts": 1792548035.963, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 7/43 (20 ops) 0s"}
+{"ts": 1792548035.974, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 8/43 (3 ops) 0s"}
+{"ts": 1792548036.06, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 9/43 (21 ops) 0s"}
+{"ts": 1792548036.165, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 10/43 (16 ops) 0s"}
+{"ts": 1792548036.219, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 11/43 (7 ops) 0s"}
+{"ts": 1792548036.229, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 12/43 (2 ops) 0s"}
+{"ts": 1792548036.4, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 13/43 (6 ops) 0s"}
+{"ts": 1792548036.416, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 14/43 (2 ops) 0s"}
+{"ts": 1792548036.545, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 15/43 (2 ops) 0s"}
+{"ts": 1792548036.645, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 16/43 (9 ops) 0s"}
+{"ts": 1792548036.657, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 17/43 (2 ops) 0s"}
+{"ts": 1792548036.892, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 18/43 (23 ops) 0s"}
+{"ts": 1792548036.901, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 19/43 (2 ops) 0s"}
+{"ts": 1792548036.961, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 20/43 (9 ops) 0s"}
+{"ts": 1792548037.04, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 21/43 (16 ops) 0s"}
+{"ts": 1792548037.045, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 22/43 (1 ops) 0s"}
+{"ts": 1792548037.072, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 23/43 (4 ops) 0s"}
+{"ts": 1792548037.109, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 24/43 (9 ops) 0s"}
+{"ts": 1792548037.121, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 25/43 (3 ops) 0s"}
+{"ts": 1792548037.151, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 26/43 (4 ops) 0s"}
+{"ts": 1792548037.195, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 27/43 (10 ops) 0s"}
+{"ts": 1792548037.21, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 28/43 (2 ops) 0s"}
+{"ts": 1792548037.215, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 29/43 (2 ops) 0s"}
+{"ts": 1792548037.238, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 30/43 (2 ops) 0s"}
+{"ts": 1792548037.254, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 31/43 (2 ops) 0s"}
+{"ts": 1792548037.259, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 32/43 (2 ops) 0s"}
+{"ts": 1792548037.29, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 33/43 (3 ops) 0s"}
+{"ts": 1792548037.306, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 34/43 (2 ops) 0s"}
+{"ts": 1792548037.323, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 35/43 (3 ops) 0s"}
+{"ts": 1792548037.455, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 36/43 (22 ops) 0s"}
+{"ts": 1792548037.463, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 37/43 (1 ops) 0s"}
+{"ts": 1792548037.479, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 38/43 (1 ops) 0s"}
+{"ts": 1792548037.491, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 39/43 (1 ops) 0s"}
+{"ts": 1792548037.507, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 40/43 (1 ops) 0s"}
+{"ts": 1792548037.535, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 41/43 (1 ops) 0s"}
+{"ts": 1792548037.564, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 42/43 (1 ops) 0s"}
+{"ts": 1792548037.59, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 43/43 (1 ops) 0s"}
+{"ts": 1792548038.011, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 1/11 (12 ops) 0s"}
+{"ts": 1792548038.017, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 2/11 (1 ops) 0s"}
+{"ts": 1792548038.022, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 3/11 (1 ops) 0s"}
+{"ts": 1792548038.045, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 4/11 (2 ops) 0s"}
+{"ts": 1792548038.064, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 5/11 (4 ops) 0s"}
+{"ts": 1792548038.07, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 6/11 (1 ops) 0s"}
+{"ts": 1792548038.136, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 7/11 (19 ops) 0s"}
+{"ts": 1792548038.145, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 8/11 (3 ops) 0s"}
+{"ts": 1792548038.216, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 9/11 (20 ops) 0s"}
+{"ts": 1792548038.31, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 10/11 (14 ops) 0s"}
+{"ts": 1792548038.348, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-fwd 11/11 (4 ops) 0s"}
+{"ts": 1792548039.337, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 1/36 (14 ops) 0s"}
+{"ts": 1792548039.347, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 2/36 (1 ops) 0s"}
+{"ts": 1792548039.354, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 3/36 (1 ops) 0s"}
+{"ts": 1792548039.38, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 4/36 (3 ops) 0s"}
+{"ts": 1792548039.4, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 5/36 (4 ops) 0s"}
+{"ts": 1792548039.407, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 6/36 (1 ops) 0s"}
+{"ts": 1792548039.474, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 7/36 (20 ops) 0s"}
+{"ts": 1792548039.481, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 8/36 (3 ops) 0s"}
+{"ts": 1792548039.554, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 9/36 (21 ops) 0s"}
+{"ts": 1792548039.643, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 10/36 (16 ops) 0s"}
+{"ts": 1792548039.7, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 11/36 (7 ops) 0s"}
+{"ts": 1792548039.71, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 12/36 (2 ops) 0s"}
+{"ts": 1792548039.868, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 13/36 (6 ops) 0s"}
+{"ts": 1792548039.883, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 14/36 (2 ops) 0s"}
+{"ts": 1792548040.013, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 15/36 (2 ops) 0s"}
+{"ts": 1792548040.093, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 16/36 (9 ops) 0s"}
+{"ts": 1792548040.106, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 17/36 (2 ops) 0s"}
+{"ts": 1792548040.341, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 18/36 (23 ops) 0s"}
+{"ts": 1792548040.353, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 19/36 (2 ops) 0s"}
+{"ts": 1792548040.412, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 20/36 (9 ops) 0s"}
+{"ts": 1792548040.488, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 21/36 (16 ops) 0s"}
+{"ts": 1792548040.493, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 22/36 (1 ops) 0s"}
+{"ts": 1792548040.517, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 23/36 (4 ops) 0s"}
+{"ts": 1792548040.537, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 24/36 (9 ops) 0s"}
+{"ts": 1792548040.55, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 25/36 (3 ops) 0s"}
+{"ts": 1792548040.572, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 26/36 (4 ops) 0s"}
+{"ts": 1792548040.606, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 27/36 (10 ops) 0s"}
+{"ts": 1792548040.616, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 28/36 (2 ops) 0s"}
+{"ts": 1792548040.62, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 29/36 (2 ops) 0s"}
+{"ts": 1792548040.64, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 30/36 (2 ops) 0s"}
+{"ts": 1792548040.65, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 31/36 (2 ops) 0s"}
+{"ts": 1792548040.656, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 32/36 (2 ops) 0s"}
+{"ts": 1792548040.693, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 33/36 (3 ops) 0s"}
+{"ts": 1792548040.714, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 34/36 (2 ops) 0s"}
+{"ts": 1792548040.719, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 35/36 (2 ops) 0s"}
+{"ts": 1792548040.866, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd 36/36 (21 ops) 0s"}
+{"ts": 1792548041.045, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-4096x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548041.163, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-1024x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548041.497, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-14336x4096 1/1 (3 ops) 0s"}
+{"ts": 1792548041.841, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] sqnorm-4096x14336 1/1 (3 ops) 0s"}
+{"ts": 1792548042.932, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 1/43 (14 ops) 0s"}
+{"ts": 1792548042.94, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 2/43 (1 ops) 0s"}
+{"ts": 1792548042.947, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 3/43 (1 ops) 0s"}
+{"ts": 1792548042.971, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 4/43 (3 ops) 0s"}
+{"ts": 1792548042.992, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 5/43 (4 ops) 0s"}
+{"ts": 1792548042.997, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 6/43 (1 ops) 0s"}
+{"ts": 1792548043.065, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 7/43 (20 ops) 0s"}
+{"ts": 1792548043.072, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 8/43 (3 ops) 0s"}
+{"ts": 1792548043.147, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 9/43 (21 ops) 0s"}
+{"ts": 1792548043.243, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 10/43 (16 ops) 0s"}
+{"ts": 1792548043.303, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 11/43 (7 ops) 0s"}
+{"ts": 1792548043.315, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 12/43 (2 ops) 0s"}
+{"ts": 1792548043.47, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 13/43 (6 ops) 0s"}
+{"ts": 1792548043.486, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 14/43 (2 ops) 0s"}
+{"ts": 1792548043.612, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 15/43 (2 ops) 0s"}
+{"ts": 1792548043.702, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 16/43 (9 ops) 0s"}
+{"ts": 1792548043.713, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 17/43 (2 ops) 0s"}
+{"ts": 1792548043.94, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 18/43 (23 ops) 0s"}
+{"ts": 1792548043.95, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 19/43 (2 ops) 0s"}
+{"ts": 1792548044.017, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 20/43 (9 ops) 0s"}
+{"ts": 1792548044.098, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 21/43 (16 ops) 0s"}
+{"ts": 1792548044.103, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 22/43 (1 ops) 0s"}
+{"ts": 1792548044.124, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 23/43 (4 ops) 0s"}
+{"ts": 1792548044.152, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 24/43 (9 ops) 0s"}
+{"ts": 1792548044.166, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 25/43 (3 ops) 0s"}
+{"ts": 1792548044.194, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 26/43 (4 ops) 0s"}
+{"ts": 1792548044.235, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 27/43 (10 ops) 0s"}
+{"ts": 1792548044.249, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 28/43 (2 ops) 0s"}
+{"ts": 1792548044.254, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 29/43 (2 ops) 0s"}
+{"ts": 1792548044.274, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 30/43 (2 ops) 0s"}
+{"ts": 1792548044.289, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 31/43 (2 ops) 0s"}
+{"ts": 1792548044.295, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 32/43 (2 ops) 0s"}
+{"ts": 1792548044.32, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 33/43 (3 ops) 0s"}
+{"ts": 1792548044.335, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 34/43 (2 ops) 0s"}
+{"ts": 1792548044.35, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 35/43 (3 ops) 0s"}
+{"ts": 1792548044.489, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 36/43 (22 ops) 0s"}
+{"ts": 1792548044.497, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 37/43 (1 ops) 0s"}
+{"ts": 1792548044.506, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 38/43 (1 ops) 0s"}
+{"ts": 1792548044.517, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 39/43 (1 ops) 0s"}
+{"ts": 1792548044.535, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 40/43 (1 ops) 0s"}
+{"ts": 1792548044.557, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 41/43 (1 ops) 0s"}
+{"ts": 1792548044.581, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 42/43 (1 ops) 0s"}
+{"ts": 1792548044.605, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S512-full-bwd-acc 43/43 (1 ops) 0s"}
+{"ts": 1792548044.923, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-rms 1/1 (8 ops) 0s"}
+{"ts": 1792548045.343, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-stats 1/1 (12 ops) 0s"}
+{"ts": 1792548045.826, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-grad 1/2 (12 ops) 0s"}
+{"ts": 1792548045.845, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-ce-grad 2/2 (2 ops) 0s"}
+{"ts": 1792548046.509, "run": "w7-split8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S512-Vc4008-rms-bwd 1/1 (24 ops) 0s"}
+{"ts": 1792548046.509, "run": "w7-split8b-rngd", "event": "compiled", "seconds": 22.9, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792548059.942, "run": "w7-split8b-rngd", "event": "step", "step": 1, "loss": 1.7157380282878876, "grad_norm": 63.1584758920002, "lr": 1.0000000000000002e-06, "tokens": 2048, "seconds": 13.393, "tokens_per_s": 152.9, "wait_weights_s": 0.0, "norm_s": 0.028, "prev_d2h_s": 0.0, "prev_adamw_s": 0.0, "prev_upload_s": 0.0, "devices": 2}
+{"ts": 1792548073.806, "run": "w7-split8b-rngd", "event": "step", "step": 2, "loss": 1.5625602304935455, "grad_norm": 45.846198180599586, "lr": 2.0000000000000003e-06, "tokens": 2048, "seconds": 13.861, "tokens_per_s": 147.8, "wait_weights_s": 8.202, "norm_s": 0.03, "prev_d2h_s": 12.241, "prev_adamw_s": 20.296, "prev_upload_s": 4.03, "devices": 2}
+{"ts": 1792548083.232, "run": "w7-split8b-rngd", "event": "step", "step": 3, "loss": 1.083037044852972, "grad_norm": 86.97845175140758, "lr": 3.0000000000000005e-06, "tokens": 2048, "seconds": 9.422, "tokens_per_s": 217.4, "wait_weights_s": 3.677, "norm_s": 0.029, "prev_d2h_s": 4.656, "prev_adamw_s": 10.686, "prev_upload_s": 3.6, "devices": 2}
+{"ts": 1792548092.12, "run": "w7-split8b-rngd", "event": "step", "step": 4, "loss": 1.1073830928653479, "grad_norm": 20.660129297982543, "lr": 4.000000000000001e-06, "tokens": 2048, "seconds": 8.886, "tokens_per_s": 230.5, "wait_weights_s": 3.306, "norm_s": 0.029, "prev_d2h_s": 4.615, "prev_adamw_s": 9.568, "prev_upload_s": 3.423, "devices": 2}
+{"ts": 1792548100.812, "run": "w7-split8b-rngd", "event": "step", "step": 5, "loss": 1.3379601538181305, "grad_norm": 13.356979699906995, "lr": 5e-06, "tokens": 2048, "seconds": 8.688, "tokens_per_s": 235.7, "wait_weights_s": 3.22, "norm_s": 0.031, "prev_d2h_s": 4.636, "prev_adamw_s": 9.636, "prev_upload_s": 3.276, "devices": 2}
+{"ts": 1792548110.028, "run": "w7-split8b-rngd", "event": "step", "step": 6, "loss": 1.6976276338100433, "grad_norm": 16.026526704388534, "lr": 6.000000000000001e-06, "tokens": 2048, "seconds": 9.211, "tokens_per_s": 222.3, "wait_weights_s": 3.248, "norm_s": 0.031, "prev_d2h_s": 4.641, "prev_adamw_s": 8.864, "prev_upload_s": 3.341, "devices": 2}
+{"ts": 1792548119.985, "run": "w7-split8b-rngd", "event": "step", "step": 7, "loss": 1.7456839978694916, "grad_norm": 16.21275086421854, "lr": 7.000000000000001e-06, "tokens": 2048, "seconds": 9.954, "tokens_per_s": 205.8, "wait_weights_s": 3.866, "norm_s": 0.039, "prev_d2h_s": 5.092, "prev_adamw_s": 11.775, "prev_upload_s": 3.575, "devices": 2}
+{"ts": 1792548129.247, "run": "w7-split8b-rngd", "event": "step", "step": 8, "loss": 1.0996691584587097, "grad_norm": 11.96341496396178, "lr": 8.000000000000001e-06, "tokens": 2048, "seconds": 9.259, "tokens_per_s": 221.2, "wait_weights_s": 3.36, "norm_s": 0.03, "prev_d2h_s": 6.444, "prev_adamw_s": 8.728, "prev_upload_s": 3.569, "devices": 2}
+{"ts": 1792548138.197, "run": "w7-split8b-rngd", "event": "step", "step": 9, "loss": 0.8897309973835945, "grad_norm": 11.355388759581118, "lr": 9e-06, "tokens": 2048, "seconds": 8.943, "tokens_per_s": 229.0, "wait_weights_s": 3.231, "norm_s": 0.026, "prev_d2h_s": 4.67, "prev_adamw_s": 9.634, "prev_upload_s": 3.388, "devices": 2}
+{"ts": 1792548147.533, "run": "w7-split8b-rngd", "event": "step", "step": 10, "loss": 1.110812452971004, "grad_norm": 9.943961600330619, "lr": 1e-05, "tokens": 2048, "seconds": 9.332, "tokens_per_s": 219.5, "wait_weights_s": 3.249, "norm_s": 0.035, "prev_d2h_s": 4.653, "prev_adamw_s": 9.3, "prev_upload_s": 3.51, "devices": 2}
+{"ts": 1792548157.061, "run": "w7-split8b-rngd", "event": "step", "step": 11, "loss": 1.1820130050182343, "grad_norm": 10.304699415159023, "lr": 9.890738003669029e-06, "tokens": 2048, "seconds": 9.525, "tokens_per_s": 215.0, "wait_weights_s": 3.249, "norm_s": 0.031, "prev_d2h_s": 4.565, "prev_adamw_s": 10.22, "prev_upload_s": 3.39, "devices": 2}
+{"ts": 1792548165.812, "run": "w7-split8b-rngd", "event": "step", "step": 12, "loss": 1.1658835411071777, "grad_norm": 15.611041704858767, "lr": 9.567727288213005e-06, "tokens": 2048, "seconds": 8.747, "tokens_per_s": 234.1, "wait_weights_s": 3.217, "norm_s": 0.026, "prev_d2h_s": 4.634, "prev_adamw_s": 9.857, "prev_upload_s": 3.5, "devices": 2}
+{"ts": 1792548174.567, "run": "w7-split8b-rngd", "event": "step", "step": 13, "loss": 1.3779177069664001, "grad_norm": 9.73557530974669, "lr": 9.045084971874738e-06, "tokens": 2048, "seconds": 8.752, "tokens_per_s": 234.0, "wait_weights_s": 3.217, "norm_s": 0.034, "prev_d2h_s": 4.697, "prev_adamw_s": 9.36, "prev_upload_s": 3.423, "devices": 2}
+{"ts": 1792548183.469, "run": "w7-split8b-rngd", "event": "step", "step": 14, "loss": 1.172858402132988, "grad_norm": 24.54147277471753, "lr": 8.345653031794292e-06, "tokens": 2048, "seconds": 8.895, "tokens_per_s": 230.2, "wait_weights_s": 3.386, "norm_s": 0.029, "prev_d2h_s": 4.596, "prev_adamw_s": 10.435, "prev_upload_s": 3.272, "devices": 2}
+{"ts": 1792548192.94, "run": "w7-split8b-rngd", "event": "step", "step": 15, "loss": 1.0665377601981163, "grad_norm": 9.743659890739046, "lr": 7.500000000000001e-06, "tokens": 2048, "seconds": 9.469, "tokens_per_s": 216.3, "wait_weights_s": 3.654, "norm_s": 0.027, "prev_d2h_s": 5.472, "prev_adamw_s": 8.87, "prev_upload_s": 3.486, "devices": 2}
+{"ts": 1792548202.384, "run": "w7-split8b-rngd", "event": "step", "step": 16, "loss": 1.2759181559085846, "grad_norm": 9.850120872764359, "lr": 6.545084971874738e-06, "tokens": 2048, "seconds": 9.44, "tokens_per_s": 217.0, "wait_weights_s": 3.521, "norm_s": 0.046, "prev_d2h_s": 5.717, "prev_adamw_s": 9.564, "prev_upload_s": 3.458, "devices": 2}
+{"ts": 1792548211.372, "run": "w7-split8b-rngd", "event": "step", "step": 17, "loss": 1.1372400522232056, "grad_norm": 12.557693762983883, "lr": 5.522642316338268e-06, "tokens": 2048, "seconds": 8.985, "tokens_per_s": 227.9, "wait_weights_s": 3.623, "norm_s": 0.023, "prev_d2h_s": 5.911, "prev_adamw_s": 9.884, "prev_upload_s": 3.635, "devices": 2}
+{"ts": 1792548220.407, "run": "w7-split8b-rngd", "event": "step", "step": 18, "loss": 1.4332831501960754, "grad_norm": 8.79509434993449, "lr": 4.477357683661734e-06, "tokens": 2048, "seconds": 9.033, "tokens_per_s": 226.7, "wait_weights_s": 3.462, "norm_s": 0.027, "prev_d2h_s": 5.499, "prev_adamw_s": 9.163, "prev_upload_s": 3.424, "devices": 2}
+{"ts": 1792548229.65, "run": "w7-split8b-rngd", "event": "step", "step": 19, "loss": 0.806281790137291, "grad_norm": 8.405786860624564, "lr": 3.4549150281252635e-06, "tokens": 2048, "seconds": 9.241, "tokens_per_s": 221.6, "wait_weights_s": 3.622, "norm_s": 0.026, "prev_d2h_s": 5.782, "prev_adamw_s": 10.037, "prev_upload_s": 3.42, "devices": 2}
+{"ts": 1792548238.423, "run": "w7-split8b-rngd", "event": "step", "step": 20, "loss": 1.5577484369277954, "grad_norm": 8.394749355720421, "lr": 2.5000000000000015e-06, "tokens": 2048, "seconds": 8.771, "tokens_per_s": 233.5, "wait_weights_s": 3.625, "norm_s": 0.025, "prev_d2h_s": 5.253, "prev_adamw_s": 10.134, "prev_upload_s": 3.296, "devices": 2}
+{"ts": 1792548247.72, "run": "w7-split8b-rngd", "event": "step", "step": 21, "loss": 1.2746593207120895, "grad_norm": 11.930472477479345, "lr": 1.6543469682057105e-06, "tokens": 2048, "seconds": 9.283, "tokens_per_s": 220.6, "wait_weights_s": 3.677, "norm_s": 0.052, "prev_d2h_s": 6.27, "prev_adamw_s": 8.557, "prev_upload_s": 3.567, "devices": 2}
+{"ts": 1792548257.296, "run": "w7-split8b-rngd", "event": "step", "step": 22, "loss": 1.3596011251211166, "grad_norm": 7.825985683613014, "lr": 9.549150281252633e-07, "tokens": 2048, "seconds": 9.574, "tokens_per_s": 213.9, "wait_weights_s": 3.597, "norm_s": 0.031, "prev_d2h_s": 4.97, "prev_adamw_s": 11.603, "prev_upload_s": 3.479, "devices": 2}
+{"ts": 1792548266.565, "run": "w7-split8b-rngd", "event": "step", "step": 23, "loss": 0.9009947255253792, "grad_norm": 7.951598289102465, "lr": 4.322727117869951e-07, "tokens": 2048, "seconds": 9.266, "tokens_per_s": 221.0, "wait_weights_s": 3.561, "norm_s": 0.034, "prev_d2h_s": 5.967, "prev_adamw_s": 8.826, "prev_upload_s": 3.408, "devices": 2}
+{"ts": 1792548276.072, "run": "w7-split8b-rngd", "event": "step", "step": 24, "loss": 0.8834240660071373, "grad_norm": 9.844812808075801, "lr": 1.0926199633097156e-07, "tokens": 2048, "seconds": 9.501, "tokens_per_s": 215.6, "wait_weights_s": 3.641, "norm_s": 0.045, "prev_d2h_s": 5.046, "prev_adamw_s": 10.568, "prev_upload_s": 3.615, "devices": 2}
+{"ts": 1792548286.216, "run": "w7-split8b-rngd", "event": "step", "step": 25, "loss": 1.3089951667934656, "grad_norm": 12.748492881743694, "lr": 0.0, "tokens": 2048, "seconds": 10.142, "tokens_per_s": 201.9, "wait_weights_s": 3.586, "norm_s": 0.029, "prev_d2h_s": 5.903, "prev_adamw_s": 9.783, "prev_upload_s": 3.554, "devices": 2}
+{"ts": 1792548300.419, "run": "w7-split8b-rngd", "event": "done", "out": "/tmp/out-split", "steps": 25, "best_loss": 0.806281790137291, "mode": "full"}

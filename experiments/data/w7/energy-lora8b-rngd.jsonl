@@ -1,0 +1,122 @@
+{"ts": 1792541168.3, "run": "w7-lora8b-rngd", "event": "start", "examples": 4000, "truncated": 291, "model": "/mnt/store/hub/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659", "config": {"H": 4096, "I": 14336, "nh": 32, "nkv": 8, "n_layers": 32, "vocab": 128256, "rope_theta": 500000.0, "eps": 1e-05, "rope_scaling": [8.0, 1.0, 4.0, 8192], "family": "llama", "head_dim": 0, "qkv_bias": false, "qk_norm": false, "gemma": false, "attn_scale": 0.0, "layer_types": [], "rope_local_theta": 10000.0, "rope_linear": 1.0, "window": 0, "moe": false}, "lora": {"r": 16, "alpha": 32.0, "targets": ["q", "v"], "scale": 2.0}, "train": {"seq_len": 128, "lr": 0.0002, "weight_decay": 0.0, "betas": [0.9, 0.999], "grad_clip": 1.0, "accum": 4, "warmup": 10, "steps": 200, "seed": 0, "log_every": 1, "full": false, "moe_hot_fraction": 0.0, "moe_replan_every": 1}, "graph_parts_max_mm": 2, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792541403.749, "run": "w7-lora8b-rngd", "event": "weights_on_device", "layers": 32, "seconds": 235.4}
+{"ts": 1792541407.504, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 1/15 (12 ops) 0s"}
+{"ts": 1792541407.51, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 2/15 (1 ops) 0s"}
+{"ts": 1792541407.524, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 3/15 (1 ops) 0s"}
+{"ts": 1792541407.55, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 4/15 (4 ops) 0s"}
+{"ts": 1792541407.584, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 5/15 (2 ops) 0s"}
+{"ts": 1792541407.619, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 6/15 (2 ops) 0s"}
+{"ts": 1792541407.657, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 7/15 (2 ops) 0s"}
+{"ts": 1792541407.684, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 8/15 (4 ops) 0s"}
+{"ts": 1792541407.704, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 9/15 (4 ops) 0s"}
+{"ts": 1792541407.71, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 10/15 (1 ops) 0s"}
+{"ts": 1792541407.785, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 11/15 (19 ops) 0s"}
+{"ts": 1792541407.791, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 12/15 (3 ops) 0s"}
+{"ts": 1792541407.867, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 13/15 (20 ops) 0s"}
+{"ts": 1792541407.966, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 14/15 (14 ops) 0s"}
+{"ts": 1792541407.998, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-fwd 15/15 (4 ops) 0s"}
+{"ts": 1792541411.611, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 1/39 (14 ops) 0s"}
+{"ts": 1792541411.617, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 2/39 (1 ops) 0s"}
+{"ts": 1792541411.642, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 3/39 (1 ops) 0s"}
+{"ts": 1792541411.678, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 4/39 (5 ops) 0s"}
+{"ts": 1792541411.719, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 5/39 (3 ops) 0s"}
+{"ts": 1792541411.757, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 6/39 (3 ops) 0s"}
+{"ts": 1792541411.797, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 7/39 (3 ops) 0s"}
+{"ts": 1792541411.834, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 8/39 (5 ops) 0s"}
+{"ts": 1792541411.858, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 9/39 (4 ops) 0s"}
+{"ts": 1792541411.868, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 10/39 (1 ops) 0s"}
+{"ts": 1792541411.967, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 11/39 (20 ops) 0s"}
+{"ts": 1792541411.983, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 12/39 (3 ops) 0s"}
+{"ts": 1792541412.072, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 13/39 (21 ops) 0s"}
+{"ts": 1792541412.154, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 14/39 (16 ops) 0s"}
+{"ts": 1792541412.194, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 15/39 (6 ops) 0s"}
+{"ts": 1792541412.32, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 16/39 (3 ops) 0s"}
+{"ts": 1792541412.492, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 17/39 (10 ops) 0s"}
+{"ts": 1792541412.651, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 18/39 (25 ops) 0s"}
+{"ts": 1792541412.738, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 19/39 (16 ops) 0s"}
+{"ts": 1792541412.743, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 20/39 (1 ops) 0s"}
+{"ts": 1792541412.759, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 21/39 (4 ops) 0s"}
+{"ts": 1792541549.218, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 22/39 (9 ops) 136s"}
+{"ts": 1792541549.232, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 23/39 (3 ops) 0s"}
+{"ts": 1792541549.261, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 24/39 (4 ops) 0s"}
+{"ts": 1792541549.308, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 25/39 (10 ops) 0s"}
+{"ts": 1792541549.329, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 26/39 (3 ops) 0s"}
+{"ts": 1792541549.345, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 27/39 (2 ops) 0s"}
+{"ts": 1792541549.371, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 28/39 (4 ops) 0s"}
+{"ts": 1792541549.394, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 29/39 (2 ops) 0s"}
+{"ts": 1792541549.407, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 30/39 (2 ops) 0s"}
+{"ts": 1792541549.434, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 31/39 (2 ops) 0s"}
+{"ts": 1792541549.478, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 32/39 (4 ops) 0s"}
+{"ts": 1792541549.497, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 33/39 (3 ops) 0s"}
+{"ts": 1792541549.563, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 34/39 (2 ops) 0s"}
+{"ts": 1792541549.593, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 35/39 (4 ops) 0s"}
+{"ts": 1792541549.598, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 36/39 (2 ops) 0s"}
+{"ts": 1792541549.619, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 37/39 (3 ops) 0s"}
+{"ts": 1792541589.025, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 38/39 (2 ops) 39s"}
+{"ts": 1792541589.111, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v2-H4096-I14336-nh32-kv8-S128-r16-qv-s2.0-bwd 39/39 (16 ops) 0s"}
+{"ts": 1792541589.393, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S128-Vc4008-rms 1/1 (8 ops) 0s"}
+{"ts": 1792541589.784, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S128-Vc4008-ce-stats 1/1 (12 ops) 0s"}
+{"ts": 1792541590.299, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S128-Vc4008-ce-grad 1/2 (12 ops) 0s"}
+{"ts": 1792541590.366, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S128-Vc4008-ce-grad 2/2 (2 ops) 0s"}
+{"ts": 1792541591.043, "run": "w7-lora8b-rngd", "event": "compile_part", "msg": "[parts] llama-v3-H4096-S128-Vc4008-rms-bwd 1/1 (24 ops) 0s"}
+{"ts": 1792541591.043, "run": "w7-lora8b-rngd", "event": "compiled", "seconds": 185.1, "backend": "furiosa", "device": "rngd:0", "sdk": "2026.2.0", "tactic": "ForMiscModel", "max_shapes": 8}
+{"ts": 1792541609.012, "run": "w7-lora8b-rngd", "event": "step", "step": 1, "loss": 0.7100572809576988, "grad_norm": 8.213320438141071, "lr": 2e-05, "tokens": 512, "seconds": 17.948, "tokens_per_s": 28.5}
+{"ts": 1792541620.997, "run": "w7-lora8b-rngd", "event": "step", "step": 2, "loss": 0.1055060625076294, "grad_norm": 2.5528306671078953, "lr": 4e-05, "tokens": 512, "seconds": 11.984, "tokens_per_s": 42.7}
+{"ts": 1792541632.76, "run": "w7-lora8b-rngd", "event": "step", "step": 3, "loss": 2.7018087320029736, "grad_norm": 3.9215638157429704, "lr": 6.000000000000001e-05, "tokens": 512, "seconds": 11.762, "tokens_per_s": 43.5}
+{"ts": 1792541643.163, "run": "w7-lora8b-rngd", "event": "step", "step": 4, "loss": 0.06497685564681888, "grad_norm": 1.9212466051097357, "lr": 8e-05, "tokens": 512, "seconds": 10.401, "tokens_per_s": 49.2}
+{"ts": 1792541653.896, "run": "w7-lora8b-rngd", "event": "step", "step": 5, "loss": 0.16415091417729855, "grad_norm": 3.2816856973822937, "lr": 0.0001, "tokens": 512, "seconds": 10.731, "tokens_per_s": 47.7}
+{"ts": 1792541664.913, "run": "w7-lora8b-rngd", "event": "step", "step": 6, "loss": 0.038393497467041016, "grad_norm": 0.6496498024583778, "lr": 0.00012000000000000002, "tokens": 512, "seconds": 11.016, "tokens_per_s": 46.5}
+{"ts": 1792541675.619, "run": "w7-lora8b-rngd", "event": "step", "step": 7, "loss": 0.012173812370747328, "grad_norm": 0.13345042467676957, "lr": 0.00014, "tokens": 512, "seconds": 10.705, "tokens_per_s": 47.8}
+{"ts": 1792541686.639, "run": "w7-lora8b-rngd", "event": "step", "step": 8, "loss": 0.02458095643669367, "grad_norm": 0.14910064155806835, "lr": 0.00016, "tokens": 512, "seconds": 11.019, "tokens_per_s": 46.5}
+{"ts": 1792541697.382, "run": "w7-lora8b-rngd", "event": "step", "step": 9, "loss": 0.09335868177004158, "grad_norm": 3.5495429450773446, "lr": 0.00018, "tokens": 512, "seconds": 10.741, "tokens_per_s": 47.7}
+{"ts": 1792541708.286, "run": "w7-lora8b-rngd", "event": "step", "step": 10, "loss": 1.7959117095451802, "grad_norm": 21.844493564504013, "lr": 0.0002, "tokens": 512, "seconds": 10.903, "tokens_per_s": 47.0}
+{"ts": 1792541719.695, "run": "w7-lora8b-rngd", "event": "step", "step": 11, "loss": 1.9792160587385297, "grad_norm": 22.670783154397384, "lr": 0.0001999863304992469, "tokens": 512, "seconds": 11.408, "tokens_per_s": 44.9}
+{"ts": 1792541730.753, "run": "w7-lora8b-rngd", "event": "step", "step": 12, "loss": 0.038796107750386, "grad_norm": 1.4003454322662943, "lr": 0.00019994532573409262, "tokens": 512, "seconds": 11.056, "tokens_per_s": 46.3}
+{"ts": 1792541740.941, "run": "w7-lora8b-rngd", "event": "step", "step": 13, "loss": 1.3477181592024863, "grad_norm": 14.333588463258709, "lr": 0.00019987699691483048, "tokens": 512, "seconds": 10.187, "tokens_per_s": 50.3}
+{"ts": 1792541751.399, "run": "w7-lora8b-rngd", "event": "step", "step": 14, "loss": 0.2966802917653695, "grad_norm": 3.849594565194279, "lr": 0.00019978136272187747, "tokens": 512, "seconds": 10.457, "tokens_per_s": 49.0}
+{"ts": 1792541762.546, "run": "w7-lora8b-rngd", "event": "step", "step": 15, "loss": 0.09958541393280029, "grad_norm": 2.9936243955499173, "lr": 0.000199658449300667, "tokens": 512, "seconds": 11.146, "tokens_per_s": 45.9}
+{"ts": 1792541773.492, "run": "w7-lora8b-rngd", "event": "step", "step": 16, "loss": 0.5863794088363647, "grad_norm": 8.250461569859834, "lr": 0.00019950829025450114, "tokens": 512, "seconds": 10.945, "tokens_per_s": 46.8}
+{"ts": 1792541784.281, "run": "w7-lora8b-rngd", "event": "step", "step": 17, "loss": 0.27834606170654297, "grad_norm": 4.859841602388092, "lr": 0.00019933092663536382, "tokens": 512, "seconds": 10.788, "tokens_per_s": 47.5}
+{"ts": 1792541794.62, "run": "w7-lora8b-rngd", "event": "step", "step": 18, "loss": 0.07507598772644997, "grad_norm": 1.6889782941322349, "lr": 0.00019912640693269752, "tokens": 512, "seconds": 10.338, "tokens_per_s": 49.5}
+{"ts": 1792541805.467, "run": "w7-lora8b-rngd", "event": "step", "step": 19, "loss": 0.13403651118278503, "grad_norm": 4.504444800976077, "lr": 0.00019889478706014687, "tokens": 512, "seconds": 10.845, "tokens_per_s": 47.2}
+{"ts": 1792541816.25, "run": "w7-lora8b-rngd", "event": "step", "step": 20, "loss": 0.16372776636853814, "grad_norm": 3.645540837119764, "lr": 0.00019863613034027224, "tokens": 512, "seconds": 10.782, "tokens_per_s": 47.5}
+{"ts": 1792541827.13, "run": "w7-lora8b-rngd", "event": "step", "step": 21, "loss": 0.05973907420411706, "grad_norm": 1.486625405243261, "lr": 0.00019835050748723824, "tokens": 512, "seconds": 10.879, "tokens_per_s": 47.1}
+{"ts": 1792541837.755, "run": "w7-lora8b-rngd", "event": "step", "step": 22, "loss": 0.09989488124847412, "grad_norm": 2.659840856442906, "lr": 0.00019803799658748094, "tokens": 512, "seconds": 10.624, "tokens_per_s": 48.2}
+{"ts": 1792541848.591, "run": "w7-lora8b-rngd", "event": "step", "step": 23, "loss": 0.07228501682402566, "grad_norm": 1.5685843478021553, "lr": 0.00019769868307835994, "tokens": 512, "seconds": 10.833, "tokens_per_s": 47.3}
+{"ts": 1792541859.416, "run": "w7-lora8b-rngd", "event": "step", "step": 24, "loss": 0.20436032628640532, "grad_norm": 2.4942087041040577, "lr": 0.0001973326597248006, "tokens": 512, "seconds": 10.823, "tokens_per_s": 47.3}
+{"ts": 1792541870.781, "run": "w7-lora8b-rngd", "event": "step", "step": 25, "loss": 0.010367115493863821, "grad_norm": 0.20263336276022104, "lr": 0.00019694002659393305, "tokens": 512, "seconds": 11.363, "tokens_per_s": 45.1}
+{"ts": 1792541881.26, "run": "w7-lora8b-rngd", "event": "step", "step": 26, "loss": 1.6515506505966187, "grad_norm": 19.205978100855226, "lr": 0.00019652089102773488, "tokens": 512, "seconds": 10.478, "tokens_per_s": 48.9}
+{"ts": 1792541892.256, "run": "w7-lora8b-rngd", "event": "step", "step": 27, "loss": 0.0676066093146801, "grad_norm": 1.8251844489757707, "lr": 0.00019607536761368484, "tokens": 512, "seconds": 10.994, "tokens_per_s": 46.6}
+{"ts": 1792541902.28, "run": "w7-lora8b-rngd", "event": "step", "step": 28, "loss": 0.014513333793729544, "grad_norm": 0.08650640111873997, "lr": 0.00019560357815343577, "tokens": 512, "seconds": 10.023, "tokens_per_s": 51.1}
+{"ts": 1792541910.895, "run": "w7-lora8b-rngd", "event": "step", "step": 29, "loss": 0.012792507652193308, "grad_norm": 0.7233548518517844, "lr": 0.00019510565162951537, "tokens": 512, "seconds": 8.613, "tokens_per_s": 59.4}
+{"ts": 1792541921.426, "run": "w7-lora8b-rngd", "event": "step", "step": 30, "loss": 1.5219159126281738, "grad_norm": 5.684887624647105, "lr": 0.00019458172417006347, "tokens": 512, "seconds": 10.53, "tokens_per_s": 48.6}
+{"ts": 1792541931.35, "run": "w7-lora8b-rngd", "event": "step", "step": 31, "loss": 1.7279413542710245, "grad_norm": 13.500642527001407, "lr": 0.00019403193901161613, "tokens": 512, "seconds": 9.923, "tokens_per_s": 51.6}
+{"ts": 1792541940.98, "run": "w7-lora8b-rngd", "event": "step", "step": 32, "loss": 0.01818482019007206, "grad_norm": 2.0991217644286624, "lr": 0.0001934564464599461, "tokens": 512, "seconds": 9.629, "tokens_per_s": 53.2}
+{"ts": 1792541951.055, "run": "w7-lora8b-rngd", "event": "step", "step": 33, "loss": 0.005698800086975098, "grad_norm": 0.06838242005957366, "lr": 0.00019285540384897073, "tokens": 512, "seconds": 10.074, "tokens_per_s": 50.8}
+{"ts": 1792541961.871, "run": "w7-lora8b-rngd", "event": "step", "step": 34, "loss": 0.268454572185874, "grad_norm": 5.221042404195424, "lr": 0.00019222897549773848, "tokens": 512, "seconds": 10.814, "tokens_per_s": 47.3}
+{"ts": 1792541972.175, "run": "w7-lora8b-rngd", "event": "step", "step": 35, "loss": 0.009616931842174381, "grad_norm": 0.03151565749002297, "lr": 0.00019157733266550575, "tokens": 512, "seconds": 10.303, "tokens_per_s": 49.7}
+{"ts": 1792541982.72, "run": "w7-lora8b-rngd", "event": "step", "step": 36, "loss": 1.1787928342819214, "grad_norm": 8.716060456345572, "lr": 0.00019090065350491626, "tokens": 512, "seconds": 10.544, "tokens_per_s": 48.6}
+{"ts": 1792541992.756, "run": "w7-lora8b-rngd", "event": "step", "step": 37, "loss": 1.9701414108276367, "grad_norm": 10.553739626968481, "lr": 0.00019019912301329592, "tokens": 512, "seconds": 10.034, "tokens_per_s": 51.0}
+{"ts": 1792542002.839, "run": "w7-lora8b-rngd", "event": "step", "step": 38, "loss": 0.0009566147346049547, "grad_norm": 0.059326747774849475, "lr": 0.00018947293298207635, "tokens": 512, "seconds": 10.082, "tokens_per_s": 50.8}
+{"ts": 1792542011.544, "run": "w7-lora8b-rngd", "event": "step", "step": 39, "loss": 0.07616913598030806, "grad_norm": 4.278172270390248, "lr": 0.0001887222819443612, "tokens": 512, "seconds": 8.704, "tokens_per_s": 58.8}
+{"ts": 1792542021.803, "run": "w7-lora8b-rngd", "event": "step", "step": 40, "loss": 0.906829833984375, "grad_norm": 7.2438882127457935, "lr": 0.0001879473751206489, "tokens": 512, "seconds": 10.255, "tokens_per_s": 49.9}
+{"ts": 1792542031.547, "run": "w7-lora8b-rngd", "event": "step", "step": 41, "loss": 0.08967697620391846, "grad_norm": 2.545820409588843, "lr": 0.00018714842436272773, "tokens": 512, "seconds": 9.743, "tokens_per_s": 52.5}
+{"ts": 1792542041.216, "run": "w7-lora8b-rngd", "event": "step", "step": 42, "loss": 0.0032049021683633327, "grad_norm": 0.06149256373398269, "lr": 0.00018632564809575742, "tokens": 512, "seconds": 9.667, "tokens_per_s": 53.0}
+{"ts": 1792542050.704, "run": "w7-lora8b-rngd", "event": "step", "step": 43, "loss": 0.0022369230864569545, "grad_norm": 0.7348565495488978, "lr": 0.0001854792712585539, "tokens": 512, "seconds": 9.486, "tokens_per_s": 54.0}
+{"ts": 1792542060.673, "run": "w7-lora8b-rngd", "event": "step", "step": 44, "loss": 1.147657712455839, "grad_norm": 6.38806388780893, "lr": 0.00018460952524209355, "tokens": 512, "seconds": 9.968, "tokens_per_s": 51.4}
+{"ts": 1792542070.212, "run": "w7-lora8b-rngd", "event": "step", "step": 45, "loss": 0.9302905388176441, "grad_norm": 7.22198035274891, "lr": 0.00018371664782625287, "tokens": 512, "seconds": 9.537, "tokens_per_s": 53.7}
+{"ts": 1792542081.296, "run": "w7-lora8b-rngd", "event": "step", "step": 46, "loss": 0.11653685569763184, "grad_norm": 5.780762173437412, "lr": 0.00018280088311480201, "tokens": 512, "seconds": 11.084, "tokens_per_s": 46.2}
+{"ts": 1792542090.431, "run": "w7-lora8b-rngd", "event": "step", "step": 47, "loss": 0.6310952100902796, "grad_norm": 3.1813016300384636, "lr": 0.00018186248146866927, "tokens": 512, "seconds": 9.134, "tokens_per_s": 56.1}
+{"ts": 1792542099.48, "run": "w7-lora8b-rngd", "event": "step", "step": 48, "loss": 0.6858387589454651, "grad_norm": 5.759279690009679, "lr": 0.00018090169943749476, "tokens": 512, "seconds": 9.048, "tokens_per_s": 56.6}
+{"ts": 1792542109.65, "run": "w7-lora8b-rngd", "event": "step", "step": 49, "loss": 0.09385939547792077, "grad_norm": 2.6032929456266505, "lr": 0.0001799187996894925, "tokens": 512, "seconds": 10.168, "tokens_per_s": 50.4}
+{"ts": 1792542120.699, "run": "w7-lora8b-rngd", "event": "step", "step": 50, "loss": 0.03661155700683594, "grad_norm": 1.5947030949010153, "lr": 0.00017891405093963938, "tokens": 512, "seconds": 11.048, "tokens_per_s": 46.3}
+{"ts": 1792542130.784, "run": "w7-lora8b-rngd", "event": "step", "step": 51, "loss": 0.4827696681022644, "grad_norm": 4.899893994032014, "lr": 0.00017788772787621126, "tokens": 512, "seconds": 10.084, "tokens_per_s": 50.8}
+{"ts": 1792542141.846, "run": "w7-lora8b-rngd", "event": "step", "step": 52, "loss": 0.19076331960968673, "grad_norm": 5.446334644501111, "lr": 0.00017684011108568592, "tokens": 512, "seconds": 11.061, "tokens_per_s": 46.3}
+{"ts": 1792542150.472, "run": "w7-lora8b-rngd", "event": "step", "step": 53, "loss": 0.03137079981388524, "grad_norm": 2.43260356819573, "lr": 0.0001757714869760335, "tokens": 512, "seconds": 8.624, "tokens_per_s": 59.4}
+{"ts": 1792542160.734, "run": "w7-lora8b-rngd", "event": "step", "step": 54, "loss": 0.00393493939191103, "grad_norm": 0.4969394423880231, "lr": 0.0001746821476984154, "tokens": 512, "seconds": 10.261, "tokens_per_s": 49.9}
+{"ts": 1792542171.404, "run": "w7-lora8b-rngd", "event": "step", "step": 55, "loss": -0.01415554666891694, "grad_norm": 0.02865444406755249, "lr": 0.00017357239106731317, "tokens": 512, "seconds": 10.669, "tokens_per_s": 48.0}
+{"ts": 1792542182.135, "run": "w7-lora8b-rngd", "event": "step", "step": 56, "loss": 0.03162622475065291, "grad_norm": 1.1360291484611078, "lr": 0.00017244252047910892, "tokens": 512, "seconds": 10.73, "tokens_per_s": 47.7}
+{"ts": 1792542192.659, "run": "w7-lora8b-rngd", "event": "step", "step": 57, "loss": 0.06417036056518555, "grad_norm": 2.03555866686986, "lr": 0.00017129284482913972, "tokens": 512, "seconds": 10.523, "tokens_per_s": 48.7}
+{"ts": 1792542203.416, "run": "w7-lora8b-rngd", "event": "step", "step": 58, "loss": 0.0056434073485434055, "grad_norm": 0.3617350009009499, "lr": 0.00017012367842724887, "tokens": 512, "seconds": 10.756, "tokens_per_s": 47.6}
+{"ts": 1792542214.365, "run": "w7-lora8b-rngd", "event": "step", "step": 59, "loss": 1.0068182945251465, "grad_norm": 13.576811897539073, "lr": 0.0001689353409118566, "tokens": 512, "seconds": 10.948, "tokens_per_s": 46.8}
+{"ts": 1792542224.91, "run": "w7-lora8b-rngd", "event": "step", "step": 60, "loss": 0.003967721946537495, "grad_norm": 0.07685631183580909, "lr": 0.00016772815716257412, "tokens": 512, "seconds": 10.544, "tokens_per_s": 48.6}
