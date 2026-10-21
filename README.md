@@ -64,7 +64,7 @@ PEFT adapters or full HF models that vLLM <code>--enable-lora</code> and llm-d l
 | | |
 | --- | --- |
 | **Hardware** | FuriosaAI RNGD (furiosa-torch 2026.2) · NVIDIA GPU (reference) · CPU (reference) |
-| **Models** | Llama 2/3/3.1/3.2 architecture (GQA, RoPE incl. llama3 scaling, SwiGLU) |
+| **Models** | Llama 2/3/3.1/3.2 architecture (GQA, RoPE incl. llama3 scaling, SwiGLU) · Qwen2 trains on RNGD with A100-equal quality but fails `npu-lora check` ([record](experiments/2026-10-21-qwen25-1.5b-lora.md)) |
 | **Modes** | LoRA (q/k/v/o) · full fine-tuning of decoder layers with CPU offload |
 | **Outputs** | PEFT adapter (`adapter_model.safetensors`) · full HF model · merged model |
 | **Integrations** | vLLM runtime LoRA loading · llm-d · Kubernetes Jobs · [lmd-top](https://github.com/ai-computing/lmd-top) `--plan train` · Prometheus metrics |
