@@ -95,6 +95,41 @@ class DeviceAdamW:
         return new, wbf
 
 
+def adamw_scaled_fn(w, m, v, g, gscale, lr, b1, b2, eps, wd, bc1, bc2):
+    """adamw_fn with the gradient scaled on the device by gscale = clip / accum ([1,1] input)."""
+    return adamw_fn(w, m, v, g.float() * gscale, lr, b1, b2, eps, wd, bc1, bc2)
+
+
+class ResidentAdamW:
+    """AdamW for weights whose fp32 master and moments stay on the device (trainer `resident_layers`).
+
+    One graph per whole weight shape — no chunking, so the bf16 w' output is the next forward's weight as is.
+    Inputs (w32, m, v, g bf16, gscale, lr, β1, β2, eps, wd, 1−β1^t, 1−β2^t) → (w32', m', v', w' bf16).
+    """
+
+    def __init__(self, backend, log=print, key="adamw-res"):
+        self.be, self.log, self.key = backend, log, key
+        self.fns = {}
+
+    @staticmethod
+    def sample(shape):
+        gen = torch.Generator().manual_seed(0)
+        r = lambda: torch.randn(shape, generator=gen) * 0.02
+        return [r(), r(), r().abs() * 1e-4, r().to(BF), torch.tensor([[0.5]])] + scalars(1e-5, (0.9, 0.999), 1e-8, 0.0, 1)
+
+    def compile(self, shape):
+        k = tuple(shape)
+        if k not in self.fns:
+            smp = self.sample(k)
+            self.fns[k] = G.compile_parts(self.be, f"{self.key}-fp32-{'x'.join(map(str, k))}",
+                                          G.build(adamw_scaled_fn, smp), smp, max_mm=0, log=self.log)
+        return self.fns[k]
+
+    def step(self, state, g, gscale, sc):
+        w, m, v = state
+        return tuple(self.compile(tuple(w.shape))(w, m, v, g, gscale, *sc))
+
+
 # ---------------------------------------------------------------- 실험
 
 def rel(a, b):

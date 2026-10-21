@@ -1,0 +1,1 @@
+RuntimeError: all inputs should be in same device, but {device(type='rngd', index=0), device(type='rngd', index=1)}
