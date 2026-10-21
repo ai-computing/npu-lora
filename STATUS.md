@@ -2,11 +2,11 @@
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
 - **State**: active
-- **Updated**: 2026-10-21 15:37+09:00
-- **Agent**: claude@control-node
-- **Task**: #34 resident device AdamW + host-throughput step model
-- **Last result**: compile --adamw-only 150 s (was >2.5 h); 2 RNGD x 8 resident layers 4.57 s/step vs 1-card offload 5.22 s (+14% tok/s, steps 3-7, intermittent OOM #40); --update-workers 8 -8%; host-throughput model within 15% on 6 configs
-- **Next**: fix resident OOM (#40), then 200-step run
+- **Updated**: 2026-10-21 20:20+09:00
+- **Agent**: claude@DESKTOP-R49IQ68
+- **Task**: #33 Qwen2 gradient check on RNGD
+- **Last result**: npu-lora check passes (worst 3.1%, was 44%); 0 negative-loss steps in 400 (was 11); loss curve matches A100
+- **Next**: Llama-3.1-8B check with the new head; Qwen3
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -41,6 +41,14 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-21 20:20+09:00 — #33 Qwen2 gradient check on RNGD
+
+- Result: npu-lora check passes (worst 3.1%, was 44%); 0 negative-loss steps in 400 (was 11); loss curve matches A100
+- Next: Llama-3.1-8B check with the new head; Qwen3
+- Metrics: step_time_s=2.74
+- Experiments: experiments/2026-10-21-qwen2-grad-precision.md
+- By: claude@DESKTOP-R49IQ68 · fix/33-qwen-lora-grad@a7e206a
 
 ### 2026-10-21 15:37+09:00 — #34 resident device AdamW + host-throughput step model
 
