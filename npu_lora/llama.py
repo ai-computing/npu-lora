@@ -212,7 +212,12 @@ def layer(c, h, w, lora, scale, cos, sin, mask, rot):
     q, k, v = proj(x, w["wq"], lora.get("q"), scale), proj(x, w["wk"], lora.get("k"), scale), \
         proj(x, w["wv"], lora.get("v"), scale)
     if c.qkv_bias:
-        q, k, v = q + w["bq"], k + w["bk"], v + w["bv"]
+        # Qwen2's q/k biases are large next to x @ w (|q|, |k| reach the hundreds), so bf16 q + bq and q . k
+        # keep only ~2-3 significant digits of the attention logits: on the CPU alone the bf16 LoRA gradients
+        # were 54% (q) / 21% (v) off an fp32 reference, and RNGD vs CPU differed by as much (#33). q and k from
+        # the bias add through RoPE and q . k^T stay fp32 (1.6% / 1%); the projections themselves remain bf16.
+        q, k, v = q.float() + w["bq"].float(), k.float() + w["bk"].float(), v + w["bv"]
+        cs, sn, rot = cs.float(), sn.float(), rot.float()
     q, k = q.view(S, c.nh, c.hd), k.view(S, c.nkv, c.hd)
     if c.qk_norm:                                                        # per head, over hd
         q, k = rms(q, w["qn"], c.eps), rms(k, w["kn"], c.eps)
