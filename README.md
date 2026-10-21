@@ -86,6 +86,17 @@ Same data, seed and hyper-parameters on RNGD and A100 (Llama-3.1-8B-Instruct, Lo
 
 See [docs/validation.md](docs/validation.md) and [`experiments/`](experiments) for the raw numbers.
 
+Training energy on one card, same node and recipe (card power from Prometheus; [record](experiments/2026-10-21-energy-rngd-vs-a100.md)):
+
+| Llama-3.1-8B | RNGD tok/s | RNGD tok/J | A100 tok/s | A100 tok/J |
+| --- | ---: | ---: | ---: | ---: |
+| Full fine-tuning, S=512, accum 4, CPU offload | 332 | **4.32** | 492 | 3.08 |
+| LoRA r=16 q·v, S=128 (npu-lora on both) | 49 | 1.05 | 366 | 2.41 |
+| LoRA, A100 with plain PyTorch autograd | — | — | 1,683 | 6.39 |
+
+Counting the host power of the offload path, full fine-tuning is 1.92 (RNGD) vs 1.55 (A100) tok/J. RNGD LoRA on
+current `main` is 4× slower than the 2026-10-16 run (more graph parts per layer), so its tok/J is not RNGD's limit.
+
 > [!NOTE]
 > **Prototype.** LoRA quality is validated on Llama-3.1-8B and full fine-tuning on Llama-3.2-1B. Llama-3.1-8B
 > full fine-tuning runs on one card with CPU offload ([step-time measurement](experiments/2026-10-16-full8b-offload-step.md));
