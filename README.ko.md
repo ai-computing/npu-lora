@@ -217,7 +217,8 @@ export.save_peft(trainer, "./adapter")      # TrainConfig(full=True)이면 expor
 
 | 옵션 | 기본값 | 뜻 |
 | --- | --- | --- |
-| `--backend` | `furiosa:0` | `furiosa:N`, `furiosa:auto` (쿠버네티스가 배정한 카드), `cuda:N`, `cpu` |
+| `--backend` | `furiosa:0` | `furiosa:N`, `furiosa:auto` (쿠버네티스가 배정한 카드), `rbln:N` (Rebellions ATOM), `cuda:N`, `cpu` |
+| `--host-parts` | `fwd` (rbln) | rbln: host에서 돌릴 그래프 조각 묶음 (`fwd`, `bwd`, `rms`, `ce-stats`, `ce-grad`, `rms-bwd`; `none` = 모두 ATOM) |
 | `--seq-len` | 512 | 시퀀스 길이. 컴파일 시점에 고정된다 (길이가 바뀌면 새로 컴파일) |
 | `--rank`, `--alpha`, `--targets` | 16, 32, `q,v` | LoRA 설정 (`q,k,v,o`) |
 | `--accum` | 1 | 기울기 누적 (micro-batch = 패킹된 시퀀스 1개) |
@@ -358,7 +359,9 @@ python tests/test_cpu.py        # CPU 회귀 테스트 (NPU 불필요)
 - micro-batch당 패킹된 시퀀스 1개다. 더 큰 배치는 `--accum`을 쓴다.
 - 첫 컴파일이 느리고(8B 모델은 수 시간) 시퀀스 길이마다 따로 컴파일한다.
 - furiosa-torch는 privileged 컨테이너에서만 장치를 연다.
-- Rebellions ATOM은 아직 지원하지 않는다. 같은 방식(`rebel.compile_from_torch`)이 적용된다.
+- Rebellions ATOM(`--backend rbln:N`, rebel-compiler 0.11)은 동작하지만 최적화하지 않았다. ATOM의 반올림 때문에
+  순전파 활성값이 어긋나므로 레이어 순전파는 기본으로 host에서 돈다(모든 조각을 ATOM에 두면 `check`가 CPU와 13 %,
+  순전파를 host에 두면 1.4 % 차이). `experiments/2026-10-22-rbln-atom-check.md` 참고.
 
 ## 📚 문서
 

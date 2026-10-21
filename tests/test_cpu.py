@@ -229,6 +229,34 @@ def test_passes_keep_values_and_parts_match_whole():
         assert _rel(a, r) < 1e-3 and _rel(b, r) < 1e-3
 
 
+def test_fold_neg_add_keeps_silu_backward():
+    # the SiLU backward after scalarize_constants has neg + add.Scalar (1 - sigmoid): RBLN gets rsub instead
+    x, g = torch.randn(8, 16), torch.randn(8, 16)
+    fn = lambda x_, g_: torch.func.vjp(torch.nn.functional.silu, x_)[1](g_)[0]
+    gm = G.build(fn, [x, g])
+    ref = gm(x, g)
+    assert G.fold_neg_add(gm) >= 1
+    ops = {str(n.target) for n in gm.graph.nodes if n.op == "call_function"}
+    assert "aten.neg.default" not in ops and "aten.rsub.Scalar" in ops
+    assert torch.allclose(gm(x, g), ref, atol=1e-6)
+
+
+def test_rbln_host_parts_place_groups_on_the_host(monkeypatch):
+    import types
+    from npu_lora.backends import RBLNBackend
+    monkeypatch.setitem(sys.modules, "rebel", types.SimpleNamespace(__version__="test"))
+    assert RBLNBackend.group("llama-v2-H64-S32-r4-qv-s2.0-fwd-p3of15-ab12cd") == "fwd"
+    assert RBLNBackend.group("llama-v3-H64-S32-Vc1000-rms-bwd-p0of1-ab12cd") == "rms-bwd"
+    assert RBLNBackend.group("sqnorm-64x64") is None
+    be = RBLNBackend(0, cache_dir=tempfile.mkdtemp())          # default: the layer forward on the host
+    assert be.host_parts == ("fwd",)
+    gm = G.build(lambda x: x * 2 + 1, [torch.randn(4, 4)])
+    fn = be.compile("k-fwd-p0of1-abc", gm, [torch.randn(4, 4)])  # placed on the host: no compiler call
+    x = torch.randn(4, 4)
+    assert torch.equal(fn(x), x * 2 + 1) and be.placed == ["k-fwd-p0of1-abc"] and be.seconds["host"] > 0
+    assert RBLNBackend(0, cache_dir=tempfile.mkdtemp(), host_parts=()).host_parts == ()
+
+
 def test_duplicate_sample_tensor_is_not_merged():
     f = lambda x, a, b: x * a + b
     x, one = torch.randn(4, 4), torch.ones(4, 4)
@@ -316,6 +344,9 @@ def test_hf_equivalence():
         hf = m(ids[None], labels=ids[None]).loss.item()
     assert abs(loss - hf) / hf < 1e-3, (loss, hf)
     assert all(math.isfinite(float(x.norm())) for gl in grads for x in gl)
+    ref_loss, ref = tr.reference_grads(ids, lab)          # the fp64 reference `check` uses
+    assert abs(ref_loss - hf) / hf < 1e-3, (ref_loss, hf)
+    assert all(_rel(x, r) < 5e-2 for gl, rl in zip(grads, ref) for x, r in zip(gl, rl))
 
 
 def _family_equivalence(family, extra):

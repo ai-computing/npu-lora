@@ -14,7 +14,7 @@ import time
 
 def _common(p):
     p.add_argument("--model", required=True, help="HF 이름(로컬 캐시) 또는 경로")
-    p.add_argument("--backend", default="furiosa:0", help="furiosa:N | cuda:N | cpu")
+    p.add_argument("--backend", default="furiosa:0", help="furiosa:N | rbln:N | cuda:N | cpu")
     p.add_argument("--seq-len", type=int, default=512)
     p.add_argument("--rank", type=int, default=16)
     p.add_argument("--alpha", type=float, default=32.0)
@@ -22,6 +22,9 @@ def _common(p):
     p.add_argument("--tactic", default="ForMiscModel", help="furiosa tactic hint")
     p.add_argument("--cache-dir", default=None, help="컴파일 캐시 (기본 ~/.cache/npu-lora)")
     p.add_argument("--max-shapes", type=int, default=8, help="furiosa max_num_unique_shapes (0=무제한)")
+    p.add_argument("--host-parts", default=None,
+                   help="rbln: graph-part groups run on the host, comma-separated (fwd, bwd, rms, ce-stats, ce-grad, "
+                        "rms-bwd); default fwd, 'none' = every part on ATOM")
     p.add_argument("--max-mm", type=int, default=None,
                    help="그래프 조각당 행렬곱 수 (기본: furiosa 2, 그 외 0=통째로)")
 
@@ -30,6 +33,9 @@ def _backend(a):
     """--backend furiosa:0 → one backend; a comma list (furiosa:0,furiosa:1) → a list (full FT layer split)."""
     from . import backends
     kw = {"tactic": a.tactic, "cache_dir": a.cache_dir, "max_shapes": a.max_shapes} if a.backend.startswith(("furiosa", "rngd")) else {}
+    if a.backend.startswith(("rbln", "atom")):
+        kw = {"cache_dir": a.cache_dir, "host_parts": None if a.host_parts is None else
+              [x for x in a.host_parts.split(",") if x and x != "none"]}
     specs = a.backend.split(",")
     bes = [backends.make(x, nth=i, **kw) for i, x in enumerate(specs)]   # furiosa:auto,furiosa:auto = the pod's two cards
     return bes if len(bes) > 1 else bes[0]
@@ -131,15 +137,26 @@ def cmd_check(a):
         res[name] = (loss, grads, time.time() - t0)
         print(json.dumps({"backend": name, "loss": loss, "seconds": round(res[name][2], 2)}), file=sys.stderr)
     (ln, gn, tn), (lc, gc, tcpu) = res["npu"], res["cpu"]
-    worst = 0.0
+    rel = lambda p, q: float((p - q).norm() / (q.norm() + 1e-12))
+    # fp32 autograd reference (dense LoRA), reported next to the CPU comparison: the CPU run rounds every op to
+    # bf16 and can itself be several % off, so this tells a device error from a noisy reference
+    ref = tr.reference_grads(ids, labels) if a.reference == "fp32" else None
+    worst, worst_ref = 0.0, 0.0
     rows = []
     for i, (x, y) in enumerate(zip(gn, gc)):
         for j, (p, q) in enumerate(zip(x, y)):
-            rel = float((p - q).norm() / (q.norm() + 1e-12))
+            e = rel(p, q)
             cos = float(torch.nn.functional.cosine_similarity(p.flatten(), q.flatten(), dim=0))
-            worst = max(worst, rel)
-            rows.append({"layer": i, "tensor": j, "rel_err": round(rel, 5), "cos": round(cos, 6)})
+            worst = max(worst, e)
+            row = {"layer": i, "tensor": j, "rel_err": round(e, 5), "cos": round(cos, 6)}
+            if ref is not None:
+                r = ref[1][i][j]
+                en, ec = rel(p, r), rel(q, r)
+                worst_ref = max(worst_ref, en)
+                row.update(npu_vs_fp32=round(en, 5), cpu_vs_fp32=round(ec, 5))
+            rows.append(row)
     out = {"loss_npu": ln, "loss_cpu": lc, "loss_rel_err": abs(ln - lc) / abs(lc), "grad_worst_rel_err": worst,
+           **({"loss_fp32": ref[0], "grad_worst_rel_err_vs_fp32": worst_ref} if ref is not None else {}),
            "npu_seconds": round(tn, 2), "cpu_seconds": round(tcpu, 2), "grads": rows,
            **({"routing": "pinned to the NPU run's experts" if "free" in pins else "free",
                "routing_flips_unpinned": pins["npu"].flips(pins["free"]) if "free" in pins else None,
@@ -273,6 +290,9 @@ def parser():
     _common(c)
     c.add_argument("--layers", type=int, default=2)
     c.add_argument("--full", action="store_true", help="전체 파인튜닝 기울기(레이어 가중치)를 비교")
+    c.add_argument("--reference", choices=("fp32", "none"), default="fp32",
+                   help="fp32: also report both runs' gradient error against an fp32 autograd reference (dense LoRA; "
+                        "the pass criterion stays NPU vs CPU)")
     c.add_argument("--free-routing", action="store_true",
                    help="MoE: CPU 기준이 자기 라우팅을 쓴다(기본: NPU 실행이 고른 expert 로 고정해 수치 오차만 비교)")
     c.set_defaults(fn=cmd_check)
