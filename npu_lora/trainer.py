@@ -331,6 +331,9 @@ class LoRATrainer:
         hb, g32, up = self._bufs[i]
         grads = [g.copy_(self.be.to_host(x, out=b)).div_(k) for x, b, g in zip(dev_grads, hb, g32)]
         t1 = time.time()
+        # this step's backward no longer needs layer i: drop the old bf16 device weights before uploading the
+        # new ones, or every layer briefly holds two copies (8B: +14 GB, out of device memory after ~15 steps)
+        self.dev_W[i] = None
         ev.wait()                                   # 역전파가 끝나야 전역 clip 계수가 정해진다
         clip, lr = box
         with torch.no_grad():
