@@ -457,3 +457,31 @@ if __name__ == "__main__":
                 failed += 1
                 print("FAIL", name, repr(e)[:200])
     sys.exit(1 if failed else 0)
+
+
+def test_routing_pins_record_and_force_experts():
+    """npu-lora check on MoE: the reference run can be pinned to another run's experts (moe.RoutingPins)"""
+    from npu_lora.moe import HostMLP, RoutingPins
+    d = tempfile.mkdtemp()
+    _tiny_moe(d)
+    mlp = HostMLP(d)
+    a = torch.randn(16, mlp.blocks[0][0].weight.shape[0], dtype=torch.bfloat16)
+    rec = RoutingPins(mlp.blocks)
+    rec.mode = "record"
+    with rec:
+        y0 = mlp.forward(0, a)
+    assert 0 in rec.ids and rec.ids[0].shape[0] == 16
+    other = RoutingPins(mlp.blocks)
+    other.ids = {0: torch.flip(rec.ids[0], dims=[0])}            # different experts per token
+    other.mode = "pin"
+    with other:
+        y1 = mlp.forward(0, a)
+    assert not torch.equal(y0, y1)
+    same = RoutingPins(mlp.blocks)
+    same.ids, same.mode = rec.ids, "pin"
+    with same:
+        y2 = mlp.forward(0, a)
+    torch.testing.assert_close(y2, y0)                           # pinned to its own choice: unchanged output
+    flipped = RoutingPins(mlp.blocks)
+    flipped.ids = other.ids
+    assert rec.flips(flipped)[0] > 0

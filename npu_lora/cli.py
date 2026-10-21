@@ -92,9 +92,10 @@ def cmd_check(a):
     import torch
     from . import backends
     from .trainer import LoRATrainer, TrainConfig
+    from .moe import RoutingPins
     tc = TrainConfig(seq_len=a.seq_len, full=a.full)
     torch.manual_seed(0)
-    res = {}
+    res, pins = {}, {}
     for name, be in (("npu", _backend(a)), ("cpu", backends.CPUBackend())):
         tr = LoRATrainer(a.model, be, _lora(a), tc, log=lambda s: print(s, file=sys.stderr),
                          max_mm=a.max_mm if name == "npu" else 0)
@@ -109,7 +110,20 @@ def cmd_check(a):
         ids = torch.randint(0, tr.c.vocab, (a.seq_len,), generator=g)
         labels = torch.roll(ids, -1)
         t0 = time.time()
-        loss, grads, _ = tr.forward_backward(ids, labels)
+        if tr.host_mlp is None:
+            loss, grads, _ = tr.forward_backward(ids, labels)
+        else:       # MoE: the CPU reference uses the experts the NPU run picked (see moe.RoutingPins)
+            pins[name] = RoutingPins(tr.host_mlp.blocks)
+            if name == "cpu" and not a.free_routing:
+                with RoutingPins(tr.host_mlp.blocks) as free:          # unpinned pass: how many tokens flip
+                    free.mode = "record"
+                    tr.forward_backward(ids, labels)
+                pins["free"] = free
+                pins[name].ids, pins[name].mode = pins["npu"].ids, "pin"
+            else:
+                pins[name].mode = "record"
+            with pins[name]:
+                loss, grads, _ = tr.forward_backward(ids, labels)
         res[name] = (loss, grads, time.time() - t0)
         print(json.dumps({"backend": name, "loss": loss, "seconds": round(res[name][2], 2)}), file=sys.stderr)
     (ln, gn, tn), (lc, gc, tcpu) = res["npu"], res["cpu"]
@@ -123,6 +137,9 @@ def cmd_check(a):
             rows.append({"layer": i, "tensor": j, "rel_err": round(rel, 5), "cos": round(cos, 6)})
     out = {"loss_npu": ln, "loss_cpu": lc, "loss_rel_err": abs(ln - lc) / abs(lc), "grad_worst_rel_err": worst,
            "npu_seconds": round(tn, 2), "cpu_seconds": round(tcpu, 2), "grads": rows,
+           **({"routing": "pinned to the NPU run's experts" if "free" in pins else "free",
+               "routing_flips_unpinned": pins["npu"].flips(pins["free"]) if "free" in pins else None,
+               "tokens": a.seq_len} if pins else {}),
            "pass": abs(ln - lc) / abs(lc) < 1e-2 and worst < 5e-2}
     print(json.dumps(out, indent=1))
     sys.exit(0 if out["pass"] else 1)
@@ -225,6 +242,8 @@ def parser():
     _common(c)
     c.add_argument("--layers", type=int, default=2)
     c.add_argument("--full", action="store_true", help="전체 파인튜닝 기울기(레이어 가중치)를 비교")
+    c.add_argument("--free-routing", action="store_true",
+                   help="MoE: CPU 기준이 자기 라우팅을 쓴다(기본: NPU 실행이 고른 expert 로 고정해 수치 오차만 비교)")
     c.set_defaults(fn=cmd_check)
 
     cc = sub.add_parser("compile", help="장치 없이 학습 그래프를 미리 컴파일(캐시만 채움)")
