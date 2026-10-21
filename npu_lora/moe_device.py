@@ -14,6 +14,8 @@ cold expert 는 host 에서 expert 마다 계산한다. 어떤 expert 를 장치
 지원: 표준 SwiGLU expert (gate_up_proj [E, 2F, H], down_proj [E, H, F], bias 없음, 기본 gate) — Qwen3-MoE,
 Qwen2-MoE(routed experts), Mixtral. 그 밖의 배치는 모두 host 에서 돈다.
 """
+import time
+
 import torch
 import torch.nn.functional as F
 
@@ -72,6 +74,7 @@ class DeviceExperts:
         self.graphs = {}
         self.resident = {}                       # layer -> (hot expert ids, device gu [E,2F,H], device dn [E,H,F])
         self.calls = 0                           # device graph calls (forward + backward)
+        self.uploads, self.upload_s = 0, 0.0     # stacked-weight uploads (hot set changed) and their host time
 
     def _graphs(self, E, H, Fd, n):
         key = (E, H, Fd, n)
@@ -95,10 +98,13 @@ class DeviceExperts:
         """device (gu, dn) stacks of `hot` (sorted expert ids) of this layer; uploaded when the hot set changes"""
         r = self.resident.get(layer)
         if r is None or r[0] != hot:
+            t0 = time.time()
             m, idx = experts_module, torch.tensor(hot)
             r = (hot, self.be.to_device(m.gate_up_proj.detach()[idx].to(BF).contiguous()),
                  self.be.to_device(m.down_proj.detach()[idx].to(BF).contiguous()))
             self.resident[layer] = r
+            self.uploads += 1
+            self.upload_s += time.time() - t0
         return r[1], r[2]
 
     def evict(self, keep):

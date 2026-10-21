@@ -567,7 +567,8 @@ class LoRATrainer:
         """hot experts per layer and device expert calls so far (MoE with moe_hot_fraction)"""
         if self.moe_dev is None:
             return {}
-        return {"hot_per_layer": [len(w.hot) if w else 0 for w in self.moe_wraps], "device_calls": self.moe_dev.calls}
+        return {"hot_per_layer": [len(w.hot) if w else 0 for w in self.moe_wraps], "device_calls": self.moe_dev.calls,
+                "weight_uploads": self.moe_dev.uploads, "weight_upload_s": round(self.moe_dev.upload_s, 3)}
 
     def _lr(self):
         tc = self.tc
