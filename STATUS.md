@@ -2,11 +2,11 @@
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
 - **State**: active
-- **Updated**: 2026-10-21 20:20+09:00
+- **Updated**: 2026-10-21 21:57+09:00
 - **Agent**: claude@DESKTOP-R49IQ68
-- **Task**: #33 Qwen2 gradient check on RNGD
-- **Last result**: npu-lora check passes (worst 3.1%, was 44%); 0 negative-loss steps in 400 (was 11); loss curve matches A100
-- **Next**: Llama-3.1-8B check with the new head; Qwen3
+- **Task**: #35 MoE hot experts batched
+- **Last result**: batched hot experts 13.0 s/step vs host-only 13.5 (alternating steps, Qwen3-30B-A3B, RNGD); per-expert main 42.4 vs 17.2
+- **Next**: more rows per call (longer S), hot fraction 0.5, drop the recomputed forward
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -41,6 +41,14 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-21 21:57+09:00 — #35 MoE hot experts batched
+
+- Result: batched hot experts 13.0 s/step vs host-only 13.5 (alternating steps, Qwen3-30B-A3B, RNGD); per-expert main 42.4 vs 17.2
+- Next: more rows per call (longer S), hot fraction 0.5, drop the recomputed forward
+- Metrics: step_time_s=13.0
+- Experiments: experiments/2026-10-21-moe-batched-hot-experts.md
+- By: claude@DESKTOP-R49IQ68 · perf/35-batch-hot-experts@9d5e498
 
 ### 2026-10-21 20:20+09:00 — #33 Qwen2 gradient check on RNGD
 
