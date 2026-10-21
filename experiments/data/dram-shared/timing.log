@@ -1,0 +1,16 @@
+17:43:29 gate2 try 1: load 1002.77 764.73 558.23 k8s-rngd=0
+17:59:18 gate2 try 2: load 617.71 638.62 640.10 holder 1326202 python3 rngd/npu0  k8s-rngd=1
+18:14:35 gate2 try 3: load 347.18 405.32 511.12 holder 1397758 python3 rngd/npu1  k8s-rngd=2
+18:29:53 gate2 try 4: load 280.21 307.06 385.79 holder 1443611 python3 rngd/npu1  k8s-rngd=1
+18:45:08 gate2 try 5: load 180.00 208.42 283.52 holder 1505534 python3 rngd/npu0  holder 1537819 python3 rngd/npu1  k8s-rngd=2
+19:00:27 gate2 try 6: load 207.98 223.32 247.43 holder 1505534 python3 rngd/npu0  holder 1608053 python3 rngd/npu1  k8s-rngd=2
+19:15:39 gate2 try 7: load 184.38 181.61 201.84 holder 1505532 python3 rngd/npu0  k8s-rngd=1
+19:30:54 gate2 try 8: load 87.70 109.58 153.69 holder 1709461 python3 rngd/npu0  k8s-rngd=1
+--- restart (gate fix) 19:33:57
+19:34:14 gate2 try 1: load 99.06 104.90 143.50 holder 1709461 python3 rngd/npu0  k8s-rngd=1
+19:47:12 t2 status=1 steps=50 oom=0 load=load 49.62 52.90 92.88 holder 1709461 python3 rngd/npu0 
+19:47:33 gate1 try 1: load 42.98 51.37 91.95 holder 1709461 python3 rngd/npu0  k8s-rngd=1
+19:56:39 t1-off status=1 steps=25 oom=0 load=load 124.24 100.97 96.34 holder 447163 python3 rngd/npu0 
+19:57:09 gate1 try 1: load 118.83 100.92 96.40 holder 447163 python3 rngd/npu0  k8s-rngd=1
+20:07:56 t1-res4 status=1 steps=25 oom=0 load=load 101.28 93.54 91.49 holder 447163 python3 rngd/npu0 
+20:08:12 TIMINGDONE

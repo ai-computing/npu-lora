@@ -1,12 +1,12 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: idle
-- **Updated**: 2026-10-21 22:27+09:00
-- **Agent**: claude@DESKTOP-R49IQ68
-- **Task**: #35 MoE hot experts batched (done)
-- **Last result**: hot+keep_graph 5.19 s/step vs host-only+keep 8.00 (paired median -2.66 s, 6/6 rounds) and vs main host-only 9.21 s; Qwen3-30B-A3B S128 RNGD
-- **Next**: -
+- **State**: active
+- **Updated**: 2026-10-21 21:10+09:00
+- **Agent**: claude@control-node
+- **Task**: #40 resident AdamW DRAM_SHARED OOM
+- **Last result**: cause: furiosa-torch 2026.2 process-global DRAM_SHARED flag raced by layer-worker uploads (not memory); fix: one lock for graph calls + device allocations; 8/8 resident runs 25/25 steps no OOM; 2 RNGD x 8 resident 4.27 s/step (480 tok/s) vs 2-card offload 5.04 s, model -1.1%
+- **Next**: 200-step 2-card resident run (#40 done-when); 1-card resident 4 timing at low host load; report the runtime flag to Furiosa
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -56,6 +56,15 @@
 - Metrics: step_time_s=13.0
 - Experiments: experiments/2026-10-21-moe-batched-hot-experts.md
 - By: claude@DESKTOP-R49IQ68 · perf/35-batch-hot-experts@9d5e498
+
+### 2026-10-21 21:10+09:00 — #40 resident AdamW DRAM_SHARED OOM
+
+- Result: cause: furiosa-torch 2026.2 process-global DRAM_SHARED flag raced by layer-worker uploads (not memory); fix: one lock for graph calls + device allocations; 8/8 resident runs 25/25 steps no OOM; 2 RNGD x 8 resident 4.27 s/step (480 tok/s) vs 2-card offload 5.04 s, model -1.1%
+- Next: 200-step 2-card resident run (#40 done-when); 1-card resident 4 timing at low host load; report the runtime flag to Furiosa
+- Metrics: tok_s=479.6, step_s=4.27
+- Params: cards=2, resident_layers=8, host_load=46-81, sdk=furiosa-torch-2026.2.0
+- Experiments: experiments/2026-10-21-dram-shared-race.md
+- By: claude@control-node · fix/40-dram-shared-race@0e58322-dirty
 
 ### 2026-10-21 20:20+09:00 — #33 Qwen2 gradient check on RNGD
 
