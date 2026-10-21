@@ -6,6 +6,7 @@ furiosa 는 그래프를 AOT 컴파일하고 결과(EDF)를 캐시에 남긴다 
 import hashlib
 import importlib.metadata as md
 import os
+import threading
 import time
 
 import torch
@@ -96,6 +97,28 @@ class CUDABackend(Backend):
 
     def describe(self):
         return {"backend": self.name, "device": torch.cuda.get_device_name(self.dev)}
+
+
+# furiosa-torch 2026.2 keeps the device memory type (DRAM / DRAM_SHARED) in one process-wide flag, and every
+# compiled-graph call sets it to DRAM_SHARED for a moment. A device allocation from another thread in that moment
+# lands in DRAM_SHARED, which has 0 bytes on a single-chip card: `OutOfMemoryError ... on DRAM_SHARED` (#40).
+# The full-FT layer workers upload while the main thread runs graphs, so graph calls and device allocations share
+# this lock. Only the allocation is under it; the host-to-device copy runs outside.
+DEVICE_ALLOC_LOCK = threading.Lock()
+
+
+class Serialized:
+    """A compiled module whose calls hold `lock` (other attributes pass through)."""
+
+    def __init__(self, fn, lock=DEVICE_ALLOC_LOCK):
+        self.fn, self.lock = fn, lock
+
+    def __call__(self, *args):
+        with self.lock:
+            return self.fn(*args)
+
+    def __getattr__(self, name):
+        return getattr(self.fn, name)
 
 
 class FuriosaBackend(Backend):
@@ -189,13 +212,23 @@ class FuriosaBackend(Backend):
                 self._save(m, path)
             except Exception as e:
                 print(f"[furiosa] could not cache {key}: {e!r}", flush=True)
-        if not self.compile_only:
+        if self.compile_only:
+            print(f"[furiosa] {key}: {mode} {time.time() - t0:.0f}s", flush=True)
+            return m
+        with DEVICE_ALLOC_LOCK:
             m.to(self.dev)
         print(f"[furiosa] {key}: {mode} {time.time() - t0:.0f}s", flush=True)
-        return m
+        return Serialized(m)
 
     def to_device(self, t):
-        return t if self.compile_only else t.to(self.dev)
+        if self.compile_only:
+            return t
+        if t.device.type != "cpu":
+            return t.to(self.dev)
+        # allocate under the lock (see DEVICE_ALLOC_LOCK), copy outside it: same speed as t.to(dev), 6.0 GB/s
+        with DEVICE_ALLOC_LOCK:
+            out = torch.empty(t.shape, dtype=t.dtype, device=self.dev)
+        return out.copy_(t)
 
     def to_host(self, t, out=None):
         # 미리 잡아 둔 버퍼로 받으면 19.9 GB/s, t.cpu() 는 매번 새 메모리를 잡느라 3.0 GB/s (RNGD)

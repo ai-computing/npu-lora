@@ -187,6 +187,30 @@ def test_visible_chip_picks_the_nth_assigned_card():
         os.environ.update(env)
 
 
+def test_serialized_graph_call_holds_the_device_alloc_lock():
+    """#40: a compiled graph call must not overlap a device allocation from a layer worker thread"""
+    import threading
+    from npu_lora import backends
+
+    class Mod:
+        tag = "edf"
+
+        def __call__(self, x):
+            assert backends.DEVICE_ALLOC_LOCK.locked()
+            return x + 1
+
+    m = backends.Serialized(Mod())
+    assert m(1) == 2 and m.tag == "edf" and not backends.DEVICE_ALLOC_LOCK.locked()
+    order = []
+    with backends.DEVICE_ALLOC_LOCK:               # a worker is allocating: the call waits for it
+        t = threading.Thread(target=lambda: order.append(m(0)))
+        t.start()
+        t.join(0.2)
+        order.append("alloc done")
+    t.join()
+    assert order == ["alloc done", 1]
+
+
 def test_rope_mm_equals_rope():
     x = torch.randn(4, 16, 32)
     cos, sin = torch.randn(16, 32), torch.randn(16, 32)
