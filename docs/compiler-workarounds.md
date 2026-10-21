@@ -45,3 +45,20 @@ apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64
 
 `npu-lora job` 과 `lmd-top --plan train` 이 만드는 Job 은 이 설치를 먼저 한다. 컴파일러는 또
 `~/.cache/furiosa/compiler` 를 스스로 만들지 않으므로 백엔드가 미리 만든다.
+
+## 런타임: 여러 스레드에서 장치 메모리 할당 (#40)
+
+`torch.OutOfMemoryError: failed to allocate … bytes on DRAM_SHARED` 가 전체 파인튜닝 레이어 작업 스레드의 업로드에서
+간헐적으로 났다(`--resident-layers` 실행, 3–13 step 뒤). 원인은 메모리 부족이 아니다.
+
+- furiosa-torch 2026.2 는 장치 메모리 종류(DRAM / DRAM_SHARED)를 프로세스 전체에 하나뿐인 플래그로 둔다
+  (`furiosa.native_torch.memory._set_dram_shared_mode` / `_set_memory_type`). 한 스레드에서 켜면 다른 스레드도 켜진 값을 본다.
+- 컴파일된 그래프 호출은 매번 이 플래그를 잠깐 DRAM_SHARED 로 바꾼다(x·2 그래프 300번을 부르는 동안 다른 스레드가 플래그를 800만 번 읽어 1978번 DRAM_SHARED 를 봄).
+- 그 순간 다른 스레드가 장치 텐서를 만들면 DRAM_SHARED 에 잡히는데, 칩 1개 카드에서 그 영역은 0 바이트라 바로 실패한다.
+  보통 할당과 그래프 출력은 모두 DRAM(47.5 GiB 한 영역)에 잡힌다.
+- 메인 스레드가 그래프를 도는 동안 작업 스레드가 올리는 시간이 길수록 잘 겹친다. 상주 실행은 메인 스레드가 상주 AdamW
+  그래프를 돌리는 바로 그때 작업 스레드들이 업로드해서 몇 step 안에 걸렸고, 오프로드만 하는 실행은 덜 겹쳐서 운 좋게 피했다.
+
+대응: `backends.DEVICE_ALLOC_LOCK` — 그래프 호출(`Serialized`)과 장치 할당(`FuriosaBackend.to_device` 의 `torch.empty`)이
+같은 잠금을 잡는다. 복사(`copy_`)는 잠금 밖이라 업로드 속도는 같다(117 MB bf16: `t.to` 6.05 GB/s, `empty`+`copy_` 6.01 GB/s).
+재현: `experiments/data/dram-shared/race_repro.py`(잠금 없이 그래프 6번 만에 OOM, 잠금으로 120 s·그래프 58 799번 동안 없음).

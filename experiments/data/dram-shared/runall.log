@@ -1,0 +1,19 @@
+16:26:10 r2-res8-a before: load 467.69 463.89 420.16
+16:35:36 r2-res8-a status=1 steps=25 oom=0
+16:35:56 r2-res8-b before: load 496.44 488.07 451.06
+16:45:42 r2-res8-b status=1 steps=25 oom=0
+16:46:04 r2-res8-c before: load 408.27 407.57 421.61
+16:58:32 r2-res8-c status=1 steps=25 oom=0
+16:58:49 r1-res4-a before: load 400.13 368.77 384.98 holder 373900 python3 rngd/npu3 
+17:00:08 r1-res4-a before: load 312.68 350.66 377.54 holder 373900 python3 rngd/npu3 
+17:01:28 r1-res4-a before: load 266.99 325.89 366.56 holder 373900 python3 rngd/npu3 
+17:03:00 r1-res4-a before: load 308.59 323.37 362.22 holder 373900 python3 rngd/npu3 
+17:04:30 r1-res4-a before: load 378.35 343.34 365.75 holder 373900 python3 rngd/npu3 
+17:05:57 r1-res4-a before: load 339.76 341.14 363.02 holder 373900 python3 rngd/npu3 
+17:07:17 r1-res4-a before: load 304.88 328.36 356.44
+17:20:35 r1-res4-a status=1 steps=25 oom=0
+17:20:55 r1-res4-b before: load 409.68 389.27 374.05
+17:30:00 r1-res4-b status=1 steps=25 oom=0
+17:30:35 r1-res4-c before: load 424.25 415.70 392.52
+17:40:31 r1-res4-c status=1 steps=25 oom=0
+17:40:31 ALLDONE
