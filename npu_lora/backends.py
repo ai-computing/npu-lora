@@ -114,7 +114,7 @@ class FuriosaBackend(Backend):
         if compile_only:
             chip = 0
         elif chip < 0:
-            chip = visible_chip()
+            chip = visible_chip(-1 - chip)          # -1: first assigned card, -2: second, ...
         self.sdk = _version("furiosa-torch")
         self.new = tuple(int(x) for x in self.sdk.split(".")[:2] if x.isdigit()) >= (2026, 3)
         if self.new:
@@ -216,14 +216,14 @@ class FuriosaBackend(Backend):
                 "max_shapes": self.max_shapes}
 
 
-def visible_chip():
+def visible_chip(nth=0):
     """쓸 RNGD 의 furiosa-torch 번호.
 
     furiosa-torch 의 `rngd:N` 은 /dev/rngd 에 보이는 카드 중 N 번째(서수)다 — npu-node-1 처럼 npu0·npu1·npu3
     이 보이면 rngd:2 가 npu3 이다. 또 furiosa-torch 는 privileged 가 아니면 장치를 열지 못한다(device plugin
     이 노출한 카드만으로는 `device index out of range`). 그래서 쿠버네티스에서는 privileged 가 아닌 init
     컨테이너가 배정받은 카드 이름(npuN)을 NPU_LORA_RNGD_FILE 에 적고, 여기서 그 카드의 서수를 찾는다.
-    둘 다 없으면 첫 카드.
+    둘 다 없으면 첫 카드. A multi-card pod lists several names ("npu1,npu3"); nth picks one of them in order.
     """
     import re
     try:
@@ -237,11 +237,14 @@ def visible_chip():
     if not want and path and os.path.exists(path):
         want = open(path).read().strip()
     if want:
-        n = int(re.sub(r"\D", "", want))
+        names = [x for x in re.split(r"[,\s]+", want) if x]
+        if nth >= len(names):
+            raise RuntimeError(f"card {nth} requested but only {names} are assigned")
+        n = int(re.sub(r"\D", "", names[nth]))
         if n not in ids:
-            raise RuntimeError(f"assigned RNGD {want} is not visible ({ids}); is the container privileged?")
+            raise RuntimeError(f"assigned RNGD {names[nth]} is not visible ({ids}); is the container privileged?")
         return ids.index(n)
-    return 0
+    return nth
 
 
 def _version(pkg):
@@ -251,11 +254,12 @@ def _version(pkg):
         return "unknown"
 
 
-def make(spec, **kw):
-    """'furiosa:0' / 'furiosa:auto'(컨테이너에 보이는 카드) / 'cuda:0' / 'cpu' → Backend"""
+def make(spec, nth=0, **kw):
+    """'furiosa:0' / 'furiosa:auto'(컨테이너에 보이는 카드) / 'cuda:0' / 'cpu' → Backend.
+    nth: for 'furiosa:auto', which of the pod's assigned cards (`--backend furiosa:auto,furiosa:auto` = both)."""
     kind, _, idx = spec.partition(":")
     if kind in ("furiosa", "rngd"):
-        return FuriosaBackend(chip=-1 if idx in ("", "auto") else int(idx), **kw)
+        return FuriosaBackend(chip=-1 - nth if idx in ("", "auto") else int(idx), **kw)
     if kind == "cuda":
         return CUDABackend(int(idx or 0))
     if kind == "cpu":

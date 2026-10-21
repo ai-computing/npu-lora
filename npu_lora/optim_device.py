@@ -100,6 +100,12 @@ def adamw_scaled_fn(w, m, v, g, gscale, lr, b1, b2, eps, wd, bc1, bc2):
     return adamw_fn(w, m, v, g.float() * gscale, lr, b1, b2, eps, wd, bc1, bc2)
 
 
+def resident_shapes(W, c):
+    """The distinct 2-D weight shapes of a decoder layer: one ResidentAdamW graph each (1-D norms stay on the host).
+    Read from the safetensors header, so no weights are loaded (Llama-3.1-8B: 4 shapes)."""
+    return sorted({s for s in (W.shape(f"model.layers.0.{L.hf_name(k)}") for k in L.layer_weights(c)) if len(s) >= 2})
+
+
 class ResidentAdamW:
     """AdamW for weights whose fp32 master and moments stay on the device (trainer `resident_layers`).
 

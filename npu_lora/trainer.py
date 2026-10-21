@@ -52,6 +52,7 @@ class TrainConfig:
     moe_replan_every: int = 1      #   re-choose them from routing counts every N steps
     resident_layers: int = 0       # full FT, per device: the first N layers of each device's range keep fp32
                                    #   master + AdamW state on the device and update there (no offload)
+    update_workers: int = 4        # full FT: host threads running the per-layer offload jobs (D2H, AdamW, H2D)
 
 
 class LoRATrainer:
@@ -184,7 +185,7 @@ class LoRATrainer:
             self.opts = [mk(per) for per in self.master]
             self._ready = [None] * c.n_layers           # 레이어별 업로드 future (다음 순전파가 기다린다)
             # 레이어마다 [내리기 → (clip 확정 대기) → AdamW → 올리기] 를 한 작업으로, 여러 레이어를 병렬로.
-            self._layer_pool = ThreadPoolExecutor(4, thread_name_prefix="npu-lora-layer")
+            self._layer_pool = ThreadPoolExecutor(self.tc.update_workers, thread_name_prefix="npu-lora-layer")
             self._step_ev = None
             self._bufs = [None] * c.n_layers            # 레이어별 host 버퍼 (bf16 기울기, fp32 기울기, bf16 업로드)
             self._rstate = {}                           # resident layer -> [(w32, m, v) on the device | None (1-D)]
@@ -253,11 +254,10 @@ class LoRATrainer:
             if self.tc.full and self.tc.accum > 1:
                 self.g_acc_d.append(cpb(f"{key}-bwd-acc", gm_acc, acc_in))
             if any(self._dev[i] == d for i in self._resident):
-                from .optim_device import ResidentAdamW
+                from .optim_device import ResidentAdamW, resident_shapes
                 ra = ResidentAdamW(b, log=log)
-                for x in w:
-                    if x.dim() >= 2:
-                        ra.compile(tuple(x.shape))
+                for shape in resident_shapes(self.W, c):
+                    ra.compile(shape)
                 self.adamw_d.append(ra)
             else:
                 self.adamw_d.append(None)
@@ -414,6 +414,7 @@ class LoRATrainer:
         from .optim_device import scalars
         be, ra = self.bes[self._dev[i]], self.adamw_d[self._dev[i]]
         t0 = time.time()
+        self.dev_W[i] = None                        # as in _layer_job: never hold old and new bf16 weights at once
         tc = self.tc
         sc = [be.to_device(x) for x in scalars(lr, tc.betas, 1e-8, tc.weight_decay, self.step_no)]
         gs = be.to_device(torch.tensor([[clip / k]], dtype=torch.float32))
@@ -542,6 +543,7 @@ class LoRATrainer:
         t_res = time.time()
         for i in sorted(self._resident):            # device AdamW: graphs run in this thread, card by card
             self.dev_W[i], self._last_times[i] = self._resident_update(i, acc[i], k, clip, lr)
+            acc[i] = sq[i] = None                   # free this layer's accumulated gradients now
         t_res = time.time() - t_res
         for i in range(c.n_layers):
             self._ready[i] = jobs[i]                # 다음 step 의 순전파가 레이어별로 기다린다

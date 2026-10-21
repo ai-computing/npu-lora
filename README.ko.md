@@ -137,6 +137,8 @@ npu-lora eval  --endpoint http://vllm:8000 --model my-adapter --data eval.jsonl
 첫 실행은 학습 그래프를 조각 단위로 컴파일하고(Llama-8B: 64코어 호스트에서 약 1.5시간) `~/.cache/npu-lora`에
 캐시한다. 이후 실행은 바로 시작한다. `npu-lora compile`은 장치를 열지 않고 캐시를 채우므로 아무 호스트에서나
 컴파일한 뒤 캐시를 복사할 수 있다.
+`npu-lora compile --adamw-only --full --model M`은 `--resident-layers N` 전체 파인튜닝이 쓰는 장치 AdamW 그래프만
+컴파일한다(Llama-8B: 그래프 4개, 150초). 가중치와 학습 그래프는 읽지 않는다.
 
 <details>
 <summary><b>전체 파인튜닝</b></summary>

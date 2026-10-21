@@ -138,6 +138,8 @@ npu-lora eval  --endpoint http://vllm:8000 --model my-adapter --data eval.jsonl
 The first run compiles the training graphs part by part (Llama-8B: ~1.5 h on a 64-core host) and
 caches them under `~/.cache/npu-lora`; later runs start immediately. `npu-lora compile` fills the
 cache without opening a device, so you can compile on any host and copy the cache.
+`npu-lora compile --adamw-only --full --model M` compiles only the device AdamW graphs that full fine-tuning
+with `--resident-layers N` uses (Llama-8B: 4 graphs, 150 s), without loading weights or the training graphs.
 
 <details>
 <summary><b>Full fine-tuning</b></summary>

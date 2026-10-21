@@ -56,6 +56,10 @@ python3 -m npu_lora.cli compile --full --model meta-llama/Llama-3.1-8B-Instruct 
   3. 장치 계산 경로가 3.3 → 5.8 s 로 느려졌다. 한 sequence 를 두 카드가 차례로 처리하므로 계산이 겹치지 않고, 한 프로세스가 동기 실행(2026.2)으로
      두 장치를 번갈아 부르는 비용과 host 경합이 더해진 것으로 보인다(원인 분해는 하지 않았다).
 - 결론적으로 모델에서 바꿔야 할 항은 "링크 대역" → "host 복사·AdamW 처리량"이다. 장치 상주 AdamW 는 바로 이 host 항을 없애므로 여전히 맞는 방향이다.
+- **고친 모델(#34, docs/design.md 「Optimizer placement: step-time model」)**: `T_step ≈ T_dev + T_res + max(0, N_off·(t_a + t_u)/W − T_res − …)`,
+  t_a·t_u 는 1장 오프로드 실행의 레이어당 host AdamW·업로드(7.07/32, 3.19/32 s), W=4 작업 스레드. 이 기록의 2장은 T_dev 5.76 + 2.57 = **8.33 s
+  예측, 측정 9.26 s(−10 %)**, 1장은 3.32 + 2.57 = 5.89 대 6.36 s(−7 %). 96코어 host 의 1·2장·상주 실행 검증은
+  [2026-10-21-resident-adamw.md](2026-10-21-resident-adamw.md).
 
 ### 상주 AdamW (질문 3) — 측정하지 못함
 
@@ -65,6 +69,9 @@ python3 -m npu_lora.cli compile --full --model meta-llama/Llama-3.1-8B-Instruct 
   8B S=512 학습 그래프 전체를 다시 빌드·검증하느라 CPU 노드(요청 8코어, 공유)에서 2.5시간 넘게 상주 그래프 단계에 이르지 못해 중단했다.
   그래서 `--resident-layers` 의 RNGD 실행 시간은 없다. 기능은 CPU 테스트로만 검증됐다.
 - 예측(미측정): 카드당 8층 상주 시 host 레이어 작업이 절반(≈7 s)으로 줄고, 장치 AdamW 는 10-19 측정 28 ms/층 × 16층 ≈ 0.45 s 를 주 스레드에 더한다.
+- **후속(#34)**: 컴파일이 느린 원인은 `compile` 이 학습 그래프 경로 전체(CPU 추적·조각 실행)를 먼저 도는 것이었고, `compile --adamw-only` 로
+  상주 그래프 4종이 150 s 에 컴파일된다. 96코어 npu-node-1 에서 2장 + 카드당 8층 상주는 4.57 s/step(1장 오프로드 5.22 s 대비 +14 %)이지만
+  간헐적 장치 OOM(#40)으로 5 step 만 쟀다 — [2026-10-21-resident-adamw.md](2026-10-21-resident-adamw.md).
 
 Raw: `experiments/data/w7/split8b-rngd-2card.jsonl`(2장), `experiments/data/w7/energy-full8b-rngd.jsonl`(1장),
 `experiments/data/w7/split8b-rngd-2card-err-before-fix.txt`(첫 실행: 경계 레이어 입력이 카드 0 에 남아 역전파가 실패 — 9fbb411 에서 수정).

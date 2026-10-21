@@ -1,12 +1,12 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: idle
-- **Updated**: 2026-10-19 09:53+09:00
+- **State**: active
+- **Updated**: 2026-10-21 15:37+09:00
 - **Agent**: claude@control-node
-- **Task**: NPUTRAIN-32 (done)
-- **Last result**: PR #1 갱신(931a189, airm/v0.1): npu_lora_tokens_per_second를 airm_tok_s와 함께 프로토콜 0.2 전까지 재출력(README deprecated 표시), rm-core v0.1.1. 검증: conformance PASS 3/FAIL 0, test_airm 4/4, test_cpu 11/11, helm template OK, check_sensitive clean. airm.workloads conformance는 0.1.1에서도 KeyError(NPUTRAIN-31)
-- **Next**: PR 머지 후 lmd-top을 airm_tok_s 우선 읽기로 전환(NPUTRAIN-30), 프로토콜 0.2에서 예전 시리즈 제거
+- **Task**: #34 resident device AdamW + host-throughput step model
+- **Last result**: compile --adamw-only 150 s (was >2.5 h); 2 RNGD x 8 resident layers 4.57 s/step vs 1-card offload 5.22 s (+14% tok/s, steps 3-7, intermittent OOM #40); --update-workers 8 -8%; host-throughput model within 15% on 6 configs
+- **Next**: fix resident OOM (#40), then 200-step run
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
@@ -41,6 +41,15 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-21 15:37+09:00 — #34 resident device AdamW + host-throughput step model
+
+- Result: compile --adamw-only 150 s (was >2.5 h); 2 RNGD x 8 resident layers 4.57 s/step vs 1-card offload 5.22 s (+14% tok/s, steps 3-7, intermittent OOM #40); --update-workers 8 -8%; host-throughput model within 15% on 6 configs
+- Next: fix resident OOM (#40), then 200-step run
+- Metrics: tok_s=448
+- Params: seq_len=512, accum=4, resident_layers=8, cards=2, sdk=furiosa-torch-2026.2.0
+- Experiments: experiments/2026-10-21-resident-adamw.md
+- By: claude@control-node · perf/34-resident-adamw-compile@8539644-dirty
 
 ### 2026-10-19 09:53+09:00 — NPUTRAIN-32 ✅
 

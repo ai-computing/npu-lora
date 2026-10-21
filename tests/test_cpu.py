@@ -155,6 +155,38 @@ def test_two_device_split_and_resident_adamw_equal_one_device():
         assert float(dr.abs().max()) > 0 and _rel(dr, du) < 5e-2, _rel(dr, du)
 
 
+def test_resident_shapes_from_header():
+    """the resident AdamW graph shapes come from the safetensors header alone (compile --adamw-only)"""
+    try:
+        from transformers import LlamaConfig, LlamaForCausalLM
+    except ImportError:
+        return
+    from npu_lora.optim_device import resident_shapes
+    d = tempfile.mkdtemp()
+    cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
+                      num_hidden_layers=1, vocab_size=1000, tie_word_embeddings=False)
+    LlamaForCausalLM(cfg).to(BF).save_pretrained(d, safe_serialization=True)
+    W = L.Weights(d)
+    assert resident_shapes(W, L.LlamaConfig.from_hf(d)) == [(32, 64), (64, 64), (64, 128), (128, 64)]
+    assert W.shape("model.layers.0.mlp.down_proj.weight") == tuple(W.get("model.layers.0.mlp.down_proj.weight").shape)
+
+
+def test_visible_chip_picks_the_nth_assigned_card():
+    """a two-card pod on a node with npu0, npu1, npu3 assigned npu1,npu3 -> ordinals 1 and 2"""
+    from npu_lora import backends
+    real, env = backends.os.listdir, dict(os.environ)
+    backends.os.listdir = lambda d: ["npu0", "npu0pe0", "npu1", "npu1mgmt", "npu3", "npu3pe0-1"]
+    try:
+        os.environ["NPU_LORA_RNGD"] = "npu1,npu3"
+        assert [backends.visible_chip(0), backends.visible_chip(1)] == [1, 2]
+        os.environ["NPU_LORA_RNGD"] = "npu3"
+        assert backends.visible_chip() == 2
+    finally:
+        backends.os.listdir = real
+        os.environ.clear()
+        os.environ.update(env)
+
+
 def test_rope_mm_equals_rope():
     x = torch.randn(4, 16, 32)
     cos, sin = torch.randn(16, 32), torch.randn(16, 32)
