@@ -365,6 +365,14 @@ class Weights:
             self._open[fn] = safe_open(os.path.join(self.path, fn), "pt")
         return self._open[fn].get_tensor(name).to(dtype)
 
+    def shape(self, name):
+        """the tensor's shape from the safetensors header (reads no data)"""
+        from safetensors import safe_open
+        fn = self.where[name]
+        if fn not in self._open:
+            self._open[fn] = safe_open(os.path.join(self.path, fn), "pt")
+        return tuple(self._open[fn].get_slice(name).get_shape())
+
     def layer(self, i, c=None):
         keys = layer_weights(c) if c is not None else LAYER_WEIGHTS
         out = {}

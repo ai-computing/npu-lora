@@ -31,7 +31,7 @@ def _backend(a):
     from . import backends
     kw = {"tactic": a.tactic, "cache_dir": a.cache_dir, "max_shapes": a.max_shapes} if a.backend.startswith(("furiosa", "rngd")) else {}
     specs = a.backend.split(",")
-    bes = [backends.make(x, **kw) for x in specs]
+    bes = [backends.make(x, nth=i, **kw) for i, x in enumerate(specs)]   # furiosa:auto,furiosa:auto = the pod's two cards
     return bes if len(bes) > 1 else bes[0]
 
 
@@ -59,7 +59,8 @@ def cmd_train(a):
                    airm_tags={"component": "npu-lora", "workload": "train", "model": model,
                               "vendor": vendor(a.backend), "run_id": run})
     tc = TrainConfig(seq_len=a.seq_len, lr=a.lr, steps=a.steps, accum=a.accum, warmup=a.warmup,
-                     grad_clip=a.grad_clip, seed=a.seed, full=a.full, resident_layers=a.resident_layers)
+                     grad_clip=a.grad_clip, seed=a.seed, full=a.full, resident_layers=a.resident_layers,
+                     update_workers=a.update_workers)
     tr = LoRATrainer(a.model, _backend(a), _lora(a), tc, log=lambda s: rep.event("log", **json.loads(s)),
                      max_mm=a.max_mm)
     tok = AutoTokenizer.from_pretrained(tr.path)
@@ -137,10 +138,33 @@ def cmd_compile(a):
     from .trainer import LoRATrainer, TrainConfig
     be = backends.FuriosaBackend(chip=0, cache_dir=a.cache_dir, tactic=a.tactic, max_shapes=a.max_shapes,
                                  compile_only=True)
+    if a.adamw_only:
+        _compile_adamw(a, be)
+        return
     tc = TrainConfig(seq_len=a.seq_len, accum=a.accum, full=a.full, resident_layers=a.resident_layers)
     tr = LoRATrainer(a.model, be, _lora(a), tc, log=lambda s: print(s, flush=True), max_mm=a.max_mm)
     t0 = time.time()
     tr.setup()
+    print(json.dumps({"event": "compiled", "seconds": round(time.time() - t0, 1), "cache": be.cache_dir}))
+
+
+def _compile_adamw(a, be):
+    """Only the resident device AdamW graphs (`train --full --resident-layers N`): one per 2-D weight shape.
+
+    They depend on the weight shapes alone, so this reads no weights and builds no training graph. The full
+    `compile` path first re-traces and re-runs every training graph part on the CPU (bf16, even when every
+    part is already cached); on a shared CPU node that did not reach the AdamW graphs in 2.5 h (#34).
+    """
+    from . import llama as L
+    from .optim_device import ResidentAdamW, resident_shapes
+    path = L.resolve_model_path(a.model)
+    c = L.LlamaConfig.from_hf(path)
+    ra = ResidentAdamW(be, log=lambda m: print(m, flush=True))
+    t0 = time.time()
+    for shape in resident_shapes(L.Weights(path), c):
+        t = time.time()
+        ra.compile(shape)
+        print(json.dumps({"event": "compiled_adamw", "shape": list(shape), "seconds": round(time.time() - t, 1)}), flush=True)
     print(json.dumps({"event": "compiled", "seconds": round(time.time() - t0, 1), "cache": be.cache_dir}))
 
 
@@ -221,6 +245,8 @@ def parser():
                    help="전체 파인튜닝: 레이어 가중치 전부 학습(--out 에 HF 전체 모델). 임베딩·lm_head 는 고정")
     t.add_argument("--resident-layers", type=int, default=0,
                    help="--full: per device, the first N layers keep fp32 master + AdamW state on the device")
+    t.add_argument("--update-workers", type=int, default=4,
+                   help="--full: host threads for the per-layer offload jobs (gradient D2H, AdamW, H2D)")
     t.add_argument("--run-name", default=None)
     t.add_argument("--log-file", default=None)
     t.add_argument("--metrics-port", type=int, default=None, help="Prometheus /metrics 포트")
@@ -237,6 +263,8 @@ def parser():
     cc.add_argument("--full", action="store_true")
     cc.add_argument("--accum", type=int, default=1)
     cc.add_argument("--resident-layers", type=int, default=0, help="also compile the resident device AdamW graphs")
+    cc.add_argument("--adamw-only", action="store_true",
+                    help="compile only the resident device AdamW graphs (no weights loaded, no training graphs)")
     cc.set_defaults(fn=cmd_compile)
 
     m = sub.add_parser("merge", help="어댑터를 base 가중치에 합친다")
