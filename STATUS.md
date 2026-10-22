@@ -1,18 +1,18 @@
 # STATUS — RNGD NPU 파인튜닝 학습
 
 <!-- research-hub:header:begin (maintained by .research/report.py; keep the "- **Key**: value" format) -->
-- **State**: idle
-- **Updated**: 2026-10-22 01:48+09:00
-- **Agent**: claude@control-node
-- **Task**: #40 resident AdamW DRAM_SHARED OOM (done)
-- **Last result**: 2 RNGD x 8 resident 200/200 steps, no OOM, 4.43 s/step (463 tok/s) steady; 1 card x 4 resident at low load 4.79 s vs 1-card offload 5.11 s, model +3.0%
-- **Next**: report the runtime flag to Furiosa
+- **State**: active
+- **Updated**: 2026-10-22 11:54+09:00
+- **Agent**: claude@dev-host
+- **Task**: #46 rename package npu_lora to npu_train
+- **Last result**: package moved to npu_train; npu_lora kept as deprecated alias (same module objects, python -m npu_lora.X works); CPU tests 38/38 in a clean venv
+- **Next**: maintainer review of PR; then uninstall npu-lora and pip install -e . on shared hosts
 - **Blockers**: none
 <!-- research-hub:header:end -->
 
 ## Goal
 
-추론 전용 AOT 컴파일 NPU인 Furiosa RNGD에서 LoRA와 full fine-tuning을 실용 수준으로 돌리고, 같은 조건의 A100 학습과 품질·속도를 비교한다. 구현은 공개 저장소 [ai-computing/npu-lora](https://github.com/ai-computing/npu-lora)의 `npu_lora` 패키지(백엔드 furiosa/cuda/cpu)다. 결과를 llm-d 서빙(vLLM `--enable-lora`)과 lmd-top(`--plan train`)에 붙이고, ai-rm 구성요소(`ai-rm.yaml`, protocol 0.1)로 내는 것까지 범위에 넣는다 (`README.md`).
+추론 전용 AOT 컴파일 NPU인 Furiosa RNGD에서 LoRA와 full fine-tuning을 실용 수준으로 돌리고, 같은 조건의 A100 학습과 품질·속도를 비교한다. 구현은 공개 저장소 [ai-computing/npu-train](https://github.com/ai-computing/npu-train)의 `npu_train` 패키지(백엔드 furiosa/cuda/cpu, 예전 이름 `npu_lora`는 deprecated 별칭으로 남김, #46)다. 결과를 llm-d 서빙(vLLM `--enable-lora`)과 lmd-top(`--plan train`)에 붙이고, ai-rm 구성요소(`ai-rm.yaml`, protocol 0.1)로 내는 것까지 범위에 넣는다 (`README.md`).
 
 ## Findings
 
@@ -41,6 +41,12 @@
 ## Log
 
 <!-- research-hub:log (report.py inserts new entries below this line, newest first) -->
+
+### 2026-10-22 11:54+09:00 — #46 rename package npu_lora to npu_train
+
+- Result: package moved to npu_train; npu_lora kept as deprecated alias (same module objects, python -m npu_lora.X works); CPU tests 38/38 in a clean venv
+- Next: maintainer review of PR; then uninstall npu-lora and pip install -e . on shared hosts
+- By: claude@dev-host · refactor/46-npu-train-package@af1e8f5-dirty
 
 ### 2026-10-22 01:48+09:00 — #40 resident AdamW DRAM_SHARED OOM ✅
 

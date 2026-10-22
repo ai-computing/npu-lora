@@ -15,7 +15,7 @@
 ## 품질 검증 — RNGD 학습이 GPU 학습과 같은 품질인가 (2026-10-16)
 
 같은 데이터(NSMC 학습 4,000개 중 1,600개 분량)·시드·설정(S=128, r=16 q·v, lr 2e-4, 400 step × accum 4)으로
-RNGD 와 A100 에서 각각 LoRA 학습 → vLLM 오프라인 평가(`npu_lora.bench`).
+RNGD 와 A100 에서 각각 LoRA 학습 → vLLM 오프라인 평가(`npu_train.bench`).
 
 | | NSMC 시험 정답률 (n=1000, 학습에 없는 리뷰) | MMLU (n=400, 망각 확인) |
 | --- | --- | --- |
@@ -24,11 +24,11 @@ RNGD 와 A100 에서 각각 LoRA 학습 → vLLM 오프라인 평가(`npu_lora.b
 | A100 학습 LoRA (같은 조건) | 87.6% | 63.0% |
 
 loss 곡선(40 step 구간 평균)의 RNGD/A100 상대차 중앙값 2.8%, 마지막 구간 0.0676 vs 0.0667
-(`python -m npu_lora.compare a/train.jsonl b/train.jsonl`). 이 검증 과정에서 고친 품질 버그:
+(`python -m npu_train.compare a/train.jsonl b/train.jsonl`). 이 검증 과정에서 고친 품질 버그:
 Llama 3.x 의 llama3 `rope_scaling` 미적용(HF 대비 1.8e-4 → 3.5e-7), 긴 예제가 응답째 잘리던 문제(이제 프롬프트 쪽을 덜어냄).
 
 재현: `examples/nsmc.py OUT` → `lmd-top --plan train … --set data=…/nsmc_train.jsonl` →
-`python -m npu_lora.bench --model … --adapter rngd=… --task nsmc=… --task mmlu=…`.
+`python -m npu_train.bench --model … --adapter rngd=… --task nsmc=… --task mmlu=…`.
 
 데모: `examples/cluster_facts.py` 로 만든 데이터를 `lmd-top --plan train … --apply` 로 학습하고
 `npu-lora serve` → `npu-lora eval`.

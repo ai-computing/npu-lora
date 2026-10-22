@@ -1,6 +1,6 @@
 # 컴파일러 우회 (furiosa-torch 2026.2)
 
-추론용 AOT 컴파일러에 역전파 그래프를 넣으면서 만난 문제와 대응이다. 모든 대응은 `npu_lora/graph.py` 의
+추론용 AOT 컴파일러에 역전파 그래프를 넣으면서 만난 문제와 대응이다. 모든 대응은 `npu_train/graph.py` 의
 그래프 변환(`graph.PASSES`) 또는 분할·컴파일 단계에 있고, `graph.build` 가 변환 전후 결과를 CPU 로 비교한다.
 
 | 증상 | 원인 | 대응 |
@@ -25,11 +25,11 @@
 | 컴파일은 되는데 실행이 `failed to run TP program … TimedOut` | 전치 view 위에서 위치 축 mean + sub + bmm 이 한 조각에 있을 때 | mean 을 전치 전 `[S, nkv, hd]` 에서 |
 | `npu-lora check` 가 엉뚱한 차이 | furiosa 를 불러오면 `torch.manual_seed` 가 장치 쪽에서 경고만 내고 끝나 두 trainer 의 A 초기값이 달라짐 | 어댑터 초기화에 전용 `torch.Generator` |
 
-값이 틀리는 문제는 컴파일 오류가 나지 않는다. `npu_lora.diagnose.compare_parts` 로 조각마다 CPU 와 장치 출력을
+값이 틀리는 문제는 컴파일 오류가 나지 않는다. `npu_train.diagnose.compare_parts` 로 조각마다 CPU 와 장치 출력을
 같은 입력으로 비교한다. 학습 루프의 컴파일 샘플은 0/상수라서 이런 문제를 잡지 못하니, 새 모델은 반드시
 `npu-lora check` 로 기울기를 비교한다.
 
-새 모델·새 SDK 에서 컴파일이 실패하면 `npu_lora.diagnose.first_failing_node` 로 처음 실패하는 노드를 찾고,
+새 모델·새 SDK 에서 컴파일이 실패하면 `npu_train.diagnose.first_failing_node` 로 처음 실패하는 노드를 찾고,
 의미를 바꾸지 않는 변환을 `graph.PASSES` 에 넣는다. 모든 변환은 `graph.build` 가 CPU 재실행으로 결과가
 같은지 확인한다.
 

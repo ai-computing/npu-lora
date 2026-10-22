@@ -37,7 +37,7 @@ def _tiny_model():
 
 
 def test_registry_loads_runner():
-    assert registry.available("airm.workloads").get("npu-lora") == "npu_lora.airm:train"
+    assert registry.available("airm.workloads").get("npu-lora") == "npu_train.airm:train"
     run = registry.load("airm.workloads", "npu-lora")
     assert callable(run) and run.name == "npu-lora"
 
@@ -74,7 +74,7 @@ def test_rejects_wrong_workload_and_config():
 
 def test_prometheus_uses_airm_name_and_tag_keys():
     from rm_core.metrics import TAG_KEYS
-    from npu_lora.metrics import Reporter
+    from npu_train.metrics import Reporter
     rep = Reporter("r", airm_tags={"component": "npu-lora", "workload": "train", "run_id": "r"})
     rep.step({"step": 1, "loss": 1.0, "grad_norm": 1.0, "lr": 1e-4, "tokens": 32, "seconds": 0.5,
               "tokens_per_s": 64.0})

@@ -78,7 +78,7 @@ spec:
             - --
             - python3
             - -m
-            - npu_lora.cli
+            - npu_train.cli
             - train
             - --model
             - {{ $t.model | quote }}
