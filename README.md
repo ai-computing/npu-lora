@@ -30,9 +30,11 @@
 
 ---
 
-Formerly the `npu-lora` repository; the Python package, CLI and Helm chart keep the name `npu-lora`.
+Formerly the `npu-lora` repository. The Python package is `npu_train` (distribution `npu-train`); the old package
+name `npu_lora` still imports and runs (`python -m npu_lora.<module>`) as a deprecated alias. The CLI command
+`npu-lora` (also installed as `npu-train`), the ai-rm workload name and the Helm chart keep the name `npu-lora`.
 
-**npu-train** (Python package and CLI `npu-lora`) trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
+**npu-train** (Python package `npu_train`, CLI `npu-lora`) trains Llama-family models on the FuriosaAI RNGD — an accelerator whose SDK ships only an
 inference compiler and runtime. It turns the backward pass into ordinary compiled graphs, keeps the
 optimizer on the host, and produces standard Hugging Face artifacts (PEFT adapters or full models)
 that vLLM and llm-d serve as-is. The same code runs on CUDA and CPU for reference runs.
@@ -120,7 +122,7 @@ Requirements:
   apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross libc6-dev
   ```
 
-- **Evaluation:** `vllm` (only for `npu_lora.bench`).
+- **Evaluation:** `vllm` (only for `npu_train.bench`).
 
 ```bash
 # 1. Verify that RNGD gradients match the CPU reference (first 2 layers).
@@ -175,9 +177,9 @@ a ServiceMonitor. [lmd-top](https://github.com/ai-computing/lmd-top) builds the 
 <br>
 
 ```python
-from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
-from npu_lora import backends, export
-from npu_lora.data import PackedDataset
+from npu_train import LoRATrainer, LoRAConfig, TrainConfig
+from npu_train import backends, export
+from npu_train.data import PackedDataset
 from transformers import AutoTokenizer
 
 trainer = LoRATrainer(
@@ -210,9 +212,9 @@ export.save_peft(trainer, "./adapter")      # export.save_full(...) with TrainCo
 | `npu-lora serve` | Load an adapter into a running vLLM |
 | `npu-lora eval` | Keyword-accuracy evaluation against an OpenAI-compatible endpoint |
 | `npu-lora job` | Print a Kubernetes training Job |
-| `python -m npu_lora.bench` | vLLM offline benchmark of base / adapters / full models |
-| `python -m npu_lora.compare` | Compare two training loss curves |
-| `python -m npu_lora.hwprobe` | Measure host↔device bandwidth and transfer/compute overlap |
+| `python -m npu_train.bench` | vLLM offline benchmark of base / adapters / full models |
+| `python -m npu_train.compare` | Compare two training loss curves |
+| `python -m npu_train.hwprobe` | Measure host↔device bandwidth and transfer/compute overlap |
 
 Frequently used training options:
 
@@ -238,7 +240,7 @@ FuriosaAI RNGD, an inference-only ahead-of-time-compiled NPU, and produces HF PE
 
 | Entry-point group | Name | Object |
 | --- | --- | --- |
-| `airm.workloads` | `npu-lora` | `npu_lora.airm:train` |
+| `airm.workloads` | `npu-lora` | `npu_train.airm:train` |
 
 ```python
 from rm_core import Workload, registry
@@ -296,7 +298,7 @@ helm template deploy/helm/npu-lora --set train.model=… --set train.data=…
 
 Using rm-core `METRICS` names: training throughput `tok_s` (Prometheus `airm_tok_s`, tags
 `component=npu-lora`, `workload=train`, `model`, `vendor`, `run_id`; also in the runner's return value).
-Accuracy `accuracy_pct` is in the `measurements` of the `npu_lora.bench` result JSON (tag
+Accuracy `accuracy_pct` is in the `measurements` of the `npu_train.bench` result JSON (tag
 `dataset=nsmc|mmlu`, `run_id` = variant name). Quantities not in rm-core are exported as `npu_lora_*`
 (`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds`, …).
 
@@ -351,9 +353,9 @@ synchronous update.
 When you bring up a new model or SDK version:
 
 1. `npu-lora check` must pass (device vs CPU gradients).
-2. If compilation fails, `npu_lora.diagnose.first_failing_node` locates the first failing op; add a
+2. If compilation fails, `npu_train.diagnose.first_failing_node` locates the first failing op; add a
    semantics-preserving rewrite to `graph.PASSES`.
-3. If results are wrong but compilation succeeds, `npu_lora.diagnose.compare_parts` compares every
+3. If results are wrong but compilation succeeds, `npu_train.diagnose.compare_parts` compares every
    compiled part with the CPU on the same inputs.
 
 `scripts/vendor-into-lmd-top.sh` copies the package into lmd-top, which embeds it in the Jobs it
@@ -363,7 +365,7 @@ generates.
 ### Limitations
 
 - Llama architecture only. Other architectures need their layer written as a pure function
-  (see `npu_lora/llama.py`).
+  (see `npu_train/llama.py`).
 - One packed sequence per micro-batch; use `--accum` for larger batches.
 - First compilation is slow (hours for an 8B model) and is per sequence length.
 - furiosa-torch opens devices only from privileged containers.

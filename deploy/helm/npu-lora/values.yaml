@@ -5,7 +5,7 @@ enabled: true
 image: {repository: furiosaai/furiosa-llm, tag: latest}
 imagePullPolicy: IfNotPresent
 install:
-  pip: "npu-lora @ git+https://github.com/ai-computing/npu-train@main"
+  pip: "npu-train @ git+https://github.com/ai-computing/npu-train@main"
 airm:
   kvTransport: ""          # 학습에는 KV 경로가 없다 — 비워 둔다
   placement: ""

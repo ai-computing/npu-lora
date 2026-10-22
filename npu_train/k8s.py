@@ -25,7 +25,7 @@ def _name(s):
 
 
 def package_files():
-    """npu_lora 패키지의 .py 파일 {이름: 내용} — ConfigMap 키가 된다(하위 디렉터리 없음)."""
+    """npu_train 패키지의 .py 파일 {이름: 내용} — ConfigMap 키가 된다(하위 디렉터리 없음)."""
     here = os.path.dirname(os.path.abspath(__file__))
     return {f: open(os.path.join(here, f)).read() for f in sorted(os.listdir(here)) if f.endswith(".py")}
 
@@ -43,7 +43,7 @@ def build(model, data, name, ns="llm-serving", steps=100, seq_len=512, rank=16, 
     repo_dir = model.replace("/", "--")
     out_dir = out_dir or f"{STORE}/adapters/{repo_dir}/{run}"
     labels = {"app": app, "app.kubernetes.io/part-of": "npu-lora", "npu-lora/run": run}
-    cmd = ["python3", "-m", "npu_lora.cli", "train",
+    cmd = ["python3", "-m", "npu_train.cli", "train",
            "--model", model, "--data", data, "--out", out_dir, "--backend", "furiosa:auto",
            "--steps", str(steps), "--seq-len", str(seq_len), "--rank", str(rank), "--alpha", str(alpha),
            "--targets", targets, "--lr", str(lr), "--accum", str(accum),
@@ -58,7 +58,7 @@ def build(model, data, name, ns="llm-serving", steps=100, seq_len=512, rank=16, 
                {"name": "src", "configMap": {"name": f"{app}-src"}},
                {"name": "store", "persistentVolumeClaim": {"claimName": STORE_PVC}}]
     mounts = [{"name": "rngd", "mountPath": "/run/npu-lora"},
-              {"name": "src", "mountPath": "/opt/npu-lora/npu_lora", "readOnly": True},
+              {"name": "src", "mountPath": "/opt/npu-lora/npu_train", "readOnly": True},
               {"name": "store", "mountPath": STORE}]
     env = [{"name": "PYTHONPATH", "value": "/opt/npu-lora"},
            {"name": "NPU_LORA_RNGD_FILE", "value": "/run/npu-lora/rngd"},

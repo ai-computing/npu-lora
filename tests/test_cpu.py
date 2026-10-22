@@ -12,8 +12,8 @@ import tempfile
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from npu_lora import graph as G, llama as L  # noqa: E402
-from npu_lora.backends import CPUBackend  # noqa: E402
+from npu_train import graph as G, llama as L  # noqa: E402
+from npu_train.backends import CPUBackend  # noqa: E402
 
 BF = torch.bfloat16
 C = L.LlamaConfig(H=64, I=128, nh=4, nkv=2, n_layers=2, vocab=1000)
@@ -66,7 +66,7 @@ def test_full_pipeline_equals_sync_update():
         from transformers import LlamaConfig, LlamaForCausalLM
     except ImportError:
         return
-    from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
+    from npu_train import LoRATrainer, LoRAConfig, TrainConfig
     d = tempfile.mkdtemp()
     cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
                       num_hidden_layers=2, vocab_size=1000, rope_theta=500000.0, tie_word_embeddings=False)
@@ -113,7 +113,7 @@ def test_two_device_split_and_resident_adamw_equal_one_device():
         from transformers import LlamaConfig, LlamaForCausalLM
     except ImportError:
         return
-    from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
+    from npu_train import LoRATrainer, LoRAConfig, TrainConfig
     d = tempfile.mkdtemp()
     cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
                       num_hidden_layers=4, vocab_size=1000, rope_theta=500000.0, tie_word_embeddings=False)
@@ -161,7 +161,7 @@ def test_resident_shapes_from_header():
         from transformers import LlamaConfig, LlamaForCausalLM
     except ImportError:
         return
-    from npu_lora.optim_device import resident_shapes
+    from npu_train.optim_device import resident_shapes
     d = tempfile.mkdtemp()
     cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
                       num_hidden_layers=1, vocab_size=1000, tie_word_embeddings=False)
@@ -173,7 +173,7 @@ def test_resident_shapes_from_header():
 
 def test_visible_chip_picks_the_nth_assigned_card():
     """a two-card pod on a node with npu0, npu1, npu3 assigned npu1,npu3 -> ordinals 1 and 2"""
-    from npu_lora import backends
+    from npu_train import backends
     real, env = backends.os.listdir, dict(os.environ)
     backends.os.listdir = lambda d: ["npu0", "npu0pe0", "npu1", "npu1mgmt", "npu3", "npu3pe0-1"]
     try:
@@ -190,7 +190,7 @@ def test_visible_chip_picks_the_nth_assigned_card():
 def test_serialized_graph_call_holds_the_device_alloc_lock():
     """#40: a compiled graph call must not overlap a device allocation from a layer worker thread"""
     import threading
-    from npu_lora import backends
+    from npu_train import backends
 
     class Mod:
         tag = "edf"
@@ -243,7 +243,7 @@ def test_fold_neg_add_keeps_silu_backward():
 
 def test_rbln_host_parts_place_groups_on_the_host(monkeypatch):
     import types
-    from npu_lora.backends import RBLNBackend
+    from npu_train.backends import RBLNBackend
     monkeypatch.setitem(sys.modules, "rebel", types.SimpleNamespace(__version__="test"))
     assert RBLNBackend.group("llama-v2-H64-S32-r4-qv-s2.0-fwd-p3of15-ab12cd") == "fwd"
     assert RBLNBackend.group("llama-v3-H64-S32-Vc1000-rms-bwd-p0of1-ab12cd") == "rms-bwd"
@@ -319,7 +319,7 @@ def test_hf_equivalence():
         from transformers import LlamaConfig, LlamaForCausalLM
     except ImportError:
         return
-    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    from npu_train import LoRAConfig, LoRATrainer, TrainConfig, export
     d = tempfile.mkdtemp()
     cfg = LlamaConfig(hidden_size=64, intermediate_size=128, num_attention_heads=4, num_key_value_heads=2,
                       num_hidden_layers=2, vocab_size=1000, rope_theta=500000.0, tie_word_embeddings=False)
@@ -352,7 +352,7 @@ def test_hf_equivalence():
 def _family_equivalence(family, extra):
     """LoRA on q,k,v,o through the functional block vs the merged model in transformers (CPU)."""
     from transformers import AutoConfig, AutoModelForCausalLM
-    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    from npu_train import LoRAConfig, LoRATrainer, TrainConfig, export
     d = tempfile.mkdtemp()
     cfg = AutoConfig.for_model(family, hidden_size=64, intermediate_size=128, num_attention_heads=4,
                                num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000,
@@ -424,7 +424,7 @@ def _moe_equivalence(family, extra):
     dL/dB = s·(dL/dW')·Aᵀ and dL/dA = s·Bᵀ·(dL/dW'). initializer_range=0.2 makes the MoE block matter: with the
     block's Jacobian dropped the gradients are off by ~0.9 (relative), with it by ~0.03 (bf16)."""
     from transformers import AutoConfig, AutoModelForCausalLM
-    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
+    from npu_train import LoRAConfig, LoRATrainer, TrainConfig, export
     d = tempfile.mkdtemp()
     cfg = AutoConfig.for_model(family, hidden_size=64, intermediate_size=128, num_attention_heads=4,
                                num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000,
@@ -481,8 +481,8 @@ def test_moe_full_finetuning():
     """MoE full fine-tuning: attention on the device path, norm + router + experts trained on the host.
     The host part's gradients equal HF autograd; loss decreases; the export loads in HF with the trainer's loss."""
     from transformers import AutoConfig, AutoModelForCausalLM
-    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig, export
-    from npu_lora import moe as M
+    from npu_train import LoRAConfig, LoRATrainer, TrainConfig, export
+    from npu_train import moe as M
     d = tempfile.mkdtemp()
     cfg = AutoConfig.for_model("qwen3_moe", hidden_size=64, intermediate_size=128, num_attention_heads=4,
                                num_key_value_heads=2, num_hidden_layers=2, vocab_size=1000, head_dim=32,
@@ -542,7 +542,7 @@ def test_moe_full_finetuning():
 def test_host_mlp_keep_graph_equals_recompute():
     """HostMLP.keep_graph reuses the forward's autograd graph in backward: same input gradients (LoRA) and the
     same host-part parameter gradients (full fine-tuning) as recomputing the forward."""
-    from npu_lora import moe as M
+    from npu_train import moe as M
     d = tempfile.mkdtemp()
     _tiny_moe(d)
     g = torch.Generator().manual_seed(2)
@@ -563,7 +563,7 @@ def test_host_mlp_keep_graph_equals_recompute():
 def test_hot_expert_packing():
     """pack(): rows grouped by hot expert, each at slot * nb + rank; nb = bucket of the busiest expert; the batched
     expert graph equals the per-expert host computation on the packed rows"""
-    from npu_lora import moe_device as MD
+    from npu_train import moe_device as MD
     slot = torch.tensor([2, 0, 2, 1, 2, 0])
     order, place, nb = MD.pack(slot, 3)
     assert nb == 8 and slot[order].tolist() == [0, 0, 1, 2, 2, 2]
@@ -589,8 +589,8 @@ def test_moe_hot_experts_on_device_match_host():
     """hot experts through the device expert graphs (CPU backend) == every expert on the host: LoRA adapter
     gradients and full fine-tuning host-part gradients (incl. the stacked expert weights) with half of each
     layer's experts forced onto the device path."""
-    from npu_lora import LoRAConfig, LoRATrainer, TrainConfig
-    from npu_lora import moe as M
+    from npu_train import LoRAConfig, LoRATrainer, TrainConfig
+    from npu_train import moe as M
     d = tempfile.mkdtemp()
     _tiny_moe(d)
     g = torch.Generator().manual_seed(1)
@@ -645,7 +645,7 @@ def test_moe_hot_experts_on_device_match_host():
 
 def test_routing_pins_record_and_force_experts():
     """npu-lora check on MoE: the reference run can be pinned to another run's experts (moe.RoutingPins)"""
-    from npu_lora.moe import HostMLP, RoutingPins
+    from npu_train.moe import HostMLP, RoutingPins
     d = tempfile.mkdtemp()
     _tiny_moe(d)
     mlp = HostMLP(d)

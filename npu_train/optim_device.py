@@ -9,7 +9,7 @@ step 에 쓴다. 식은 torch.optim.AdamW(fused) 와 같다:
 레이어 가중치는 [CHUNK_ROWS, CHUNK_COLS] 조각으로 나눠 같은 그래프 하나로 돈다(norm 은 [1, hidden] 그래프).
 두 변형: fp32(상태·master 모두 fp32, 다음 순전파용 bf16 w' 도 낸다), bf16(w·m·v 모두 bf16, 계산은 fp32).
 
-  python -m npu_lora.optim_device --backend furiosa:auto --model meta-llama/Llama-3.1-8B-Instruct --out r.json
+  python -m npu_train.optim_device --backend furiosa:auto --model meta-llama/Llama-3.1-8B-Instruct --out r.json
 """
 import argparse
 import json

@@ -2,7 +2,7 @@
 
 vLLM 이미지(GPU)에서 돈다. 한 번 실행에 모델 하나, 그 위에 LoRA 어댑터 여러 개.
 
-  python -m npu_lora.bench --model meta-llama/Llama-3.1-8B-Instruct \
+  python -m npu_train.bench --model meta-llama/Llama-3.1-8B-Instruct \
       --adapter npu=/mnt/store/adapters/.../nsmc-rngd --adapter gpu=/mnt/store/adapters/.../nsmc-cuda \
       --task nsmc=nsmc_test.jsonl --task mmlu=mmlu.jsonl --out result.json
 

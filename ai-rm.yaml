@@ -13,13 +13,13 @@ test:
   - python -m rm_core.conformance
 adapters:
   - group: airm.workloads
-    name: npu-lora              # npu_lora.airm:train
+    name: npu-lora              # npu_train.airm:train
 deploy:
   target: k8s
   chart: deploy/helm/npu-lora   # 학습 Job (helm template deploy/helm/npu-lora)
   manifests: null               # `npu-lora job ... | kubectl apply -f -` 도 같은 Job 을 만든다
   image: null                   # 공식 furiosaai/furiosa-llm 이미지 + 시작 시 pip 설치(chart) 또는 ConfigMap(CLI)
-metrics: [tok_s, accuracy_pct]  # tok_s: 학습 처리량(workload=train), accuracy_pct: npu_lora.bench(dataset=nsmc|mmlu)
+metrics: [tok_s, accuracy_pct]  # tok_s: 학습 처리량(workload=train), accuracy_pct: npu_train.bench(dataset=nsmc|mmlu)
 config:
   env_example: cluster.example.env
 interfaces:

@@ -1,6 +1,6 @@
 """장치 전송 대역폭과 '계산 중 전송' 겹치기 가능 여부를 잰다 — offload 학습 설계의 입력값.
 
-  python -m npu_lora.hwprobe --backend furiosa:auto
+  python -m npu_train.hwprobe --backend furiosa:auto
 """
 import argparse
 import json

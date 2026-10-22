@@ -78,6 +78,6 @@ def _check_keys(cfg):
         raise ContractError(f"unknown npu-lora config keys {sorted(unknown)}; allowed {KEYS}")
 
 
-# entry point 는 npu_lora.airm:train. rm_core.registry.load 가 등록된 객체를 (설정 기본값 kwargs 로) 호출해
+# entry point 는 npu_train.airm:train. rm_core.registry.load 가 등록된 객체를 (설정 기본값 kwargs 로) 호출해
 # 인스턴스를 만들므로, 클래스를 그 이름으로 내보낸다 — 로드 결과가 (Workload, **설정) 을 받는 runner 다.
 train = TrainRunner

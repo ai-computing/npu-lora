@@ -1,6 +1,6 @@
 """두 학습 로그(JSONL)의 loss 곡선 비교 — 같은 데이터·시드·설정이면 장치가 달라도 곡선이 겹쳐야 한다.
 
-  python -m npu_lora.compare a/train.jsonl b/train.jsonl [--window 20]
+  python -m npu_train.compare a/train.jsonl b/train.jsonl [--window 20]
 
 출력: step 구간별 평균 loss(두 곡선), 구간 평균의 상대차, 전체 지표.
 bf16 연산 순서가 장치마다 달라 step 단위로는 갈라지지만(혼돈적 누적), 구간 평균은 오차 범위 안이어야 한다.

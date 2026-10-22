@@ -30,7 +30,9 @@
 
 ---
 
-이전 저장소 이름은 `npu-lora`입니다. Python 패키지, CLI, Helm chart 이름은 `npu-lora` 그대로입니다.
+이전 저장소 이름은 `npu-lora`입니다. Python 패키지는 `npu_train`(배포 이름 `npu-train`)입니다. 예전 패키지 이름
+`npu_lora`도 deprecated 별칭으로 그대로 import 하고 실행할 수 있습니다(`python -m npu_lora.<module>`). CLI 명령
+`npu-lora`(`npu-train`으로도 설치됨), ai-rm workload 이름, Helm chart 이름은 `npu-lora` 그대로입니다.
 
 **npu-lora**는 FuriosaAI RNGD에서 Llama 계열 모델을 학습한다. RNGD의 SDK는 추론용 컴파일러와 런타임만
 제공한다. npu-lora는 역전파를 일반 컴파일 그래프로 바꾸고, optimizer는 host에서 돌리며, vLLM과 llm-d가 그대로
@@ -119,7 +121,7 @@ pip install -e .
   apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross libc6-dev
   ```
 
-- **평가:** `vllm` (`npu_lora.bench`에만 필요).
+- **평가:** `vllm` (`npu_train.bench`에만 필요).
 
 ```bash
 # 1. RNGD 기울기가 CPU 기준과 일치하는지 확인 (앞 2 레이어).
@@ -174,9 +176,9 @@ Job은 공식 `furiosa-llm` 이미지에 ConfigMap으로 패키지를 마운트�
 <br>
 
 ```python
-from npu_lora import LoRATrainer, LoRAConfig, TrainConfig
-from npu_lora import backends, export
-from npu_lora.data import PackedDataset
+from npu_train import LoRATrainer, LoRAConfig, TrainConfig
+from npu_train import backends, export
+from npu_train.data import PackedDataset
 from transformers import AutoTokenizer
 
 trainer = LoRATrainer(
@@ -209,9 +211,9 @@ export.save_peft(trainer, "./adapter")      # TrainConfig(full=True)이면 expor
 | `npu-lora serve` | 실행 중인 vLLM에 어댑터 로드 |
 | `npu-lora eval` | OpenAI 호환 엔드포인트로 키워드 정답률 평가 |
 | `npu-lora job` | 쿠버네티스 학습 Job 출력 |
-| `python -m npu_lora.bench` | 기본 모델 / 어댑터 / 전체 모델의 vLLM 오프라인 벤치마크 |
-| `python -m npu_lora.compare` | 학습 loss 곡선 두 개 비교 |
-| `python -m npu_lora.hwprobe` | host↔device 대역폭과 전송/계산 겹침 측정 |
+| `python -m npu_train.bench` | 기본 모델 / 어댑터 / 전체 모델의 vLLM 오프라인 벤치마크 |
+| `python -m npu_train.compare` | 학습 loss 곡선 두 개 비교 |
+| `python -m npu_train.hwprobe` | host↔device 대역폭과 전송/계산 겹침 측정 |
 
 자주 쓰는 학습 옵션:
 
@@ -237,7 +239,7 @@ npu-lora는 ai-rm 구성요소다(계층 `l3-serving`, kind `workload`, 성숙�
 
 | Entry-point 그룹 | 이름 | 객체 |
 | --- | --- | --- |
-| `airm.workloads` | `npu-lora` | `npu_lora.airm:train` |
+| `airm.workloads` | `npu-lora` | `npu_train.airm:train` |
 
 ```python
 from rm_core import Workload, registry
@@ -294,7 +296,7 @@ helm template deploy/helm/npu-lora --set train.model=… --set train.data=…
 
 rm-core `METRICS` 이름을 쓴다. 학습 처리량 `tok_s`(Prometheus `airm_tok_s`, 태그 `component=npu-lora`,
 `workload=train`, `model`, `vendor`, `run_id`; runner 반환값에도 들어 있다). 정확도 `accuracy_pct`는
-`npu_lora.bench` 결과 JSON의 `measurements`(태그 `dataset=nsmc|mmlu`, `run_id`=변형 이름)에 있다. rm-core에 없는
+`npu_train.bench` 결과 JSON의 `measurements`(태그 `dataset=nsmc|mmlu`, `run_id`=변형 이름)에 있다. rm-core에 없는
 양은 `npu_lora_*`로 낸다(`npu_lora_loss`, `npu_lora_grad_norm`, `npu_lora_step_seconds` 등).
 
 **Deprecated**: 예전 처리량 시리즈 `npu_lora_tokens_per_second`(라벨 `run`)는 `airm_tok_s`와 같은 값으로 프로토콜
@@ -346,16 +348,16 @@ python tests/test_cpu.py        # CPU 회귀 테스트 (NPU 불필요)
 새 모델이나 SDK 버전을 올릴 때:
 
 1. `npu-lora check`가 통과해야 한다 (장치 대 CPU 기울기).
-2. 컴파일이 실패하면 `npu_lora.diagnose.first_failing_node`로 처음 실패하는 연산을 찾고, 의미를 보존하는
+2. 컴파일이 실패하면 `npu_train.diagnose.first_failing_node`로 처음 실패하는 연산을 찾고, 의미를 보존하는
    재작성을 `graph.PASSES`에 추가한다.
-3. 컴파일은 되는데 결과가 틀리면 `npu_lora.diagnose.compare_parts`로 컴파일된 조각마다 같은 입력에서 CPU와 비교한다.
+3. 컴파일은 되는데 결과가 틀리면 `npu_train.diagnose.compare_parts`로 컴파일된 조각마다 같은 입력에서 CPU와 비교한다.
 
 `scripts/vendor-into-lmd-top.sh`는 패키지를 lmd-top에 복사한다. lmd-top은 이를 자신이 만드는 Job에 넣는다.
 </details>
 
 ### 한계
 
-- Llama 구조만 지원한다. 다른 구조는 레이어를 순수 함수로 작성해야 한다(`npu_lora/llama.py` 참조).
+- Llama 구조만 지원한다. 다른 구조는 레이어를 순수 함수로 작성해야 한다(`npu_train/llama.py` 참조).
 - micro-batch당 패킹된 시퀀스 1개다. 더 큰 배치는 `--accum`을 쓴다.
 - 첫 컴파일이 느리고(8B 모델은 수 시간) 시퀀스 길이마다 따로 컴파일한다.
 - furiosa-torch는 privileged 컨테이너에서만 장치를 연다.
